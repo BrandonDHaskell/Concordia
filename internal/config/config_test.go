@@ -233,6 +233,20 @@ predicate = "tag:b"`,
 [[view]]
 name = "empty"`,
 		},
+		{
+			name: "view with unparseable predicate",
+			body: serverOK + `
+[[view]]
+name      = "bad"
+predicate = "tag:kids and"`,
+		},
+		{
+			name: "view with unknown selector",
+			body: serverOK + `
+[[view]]
+name      = "bad"
+predicate = "color:red"`,
+		},
 	}
 
 	for _, tt := range tests {
