@@ -23,6 +23,8 @@ func Event(providerKind string, raw provider.RawEvent, cal model.Calendar) (mode
 	switch providerKind {
 	case model.ProviderGoogle:
 		return Google(raw, cal)
+	case model.ProviderGraph:
+		return Graph(raw, cal)
 	default:
 		return model.Event{}, fmt.Errorf("normalize: no normalizer for provider %q", providerKind)
 	}

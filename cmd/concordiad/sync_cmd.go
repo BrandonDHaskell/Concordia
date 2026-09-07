@@ -34,14 +34,7 @@ func runSyncOnce(ctx context.Context, args []string, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	if acct.Provider != config.ProviderGoogle {
-		return fmt.Errorf("account %q has provider %q; only google syncs so far", acct.Name, acct.Provider)
-	}
 
-	oauthCfg, err := loadGoogleOAuthConfig(cfg)
-	if err != nil {
-		return err
-	}
 	tokStore, err := authFileTokenStore(cfg)
 	if err != nil {
 		return err
@@ -58,14 +51,14 @@ func runSyncOnce(ctx context.Context, args []string, log *slog.Logger) error {
 
 	row, err := st.AccountByCredentialRef(ctx, acct.Ref())
 	if err != nil {
-		return fmt.Errorf("account not authorized yet (run: concordiad auth google --account %s): %w", acct.Name, err)
+		return fmt.Errorf("account not authorized yet (run: concordiad auth %s --account %q): %w", acct.Provider, acct.Name, err)
 	}
 	calendars, err := st.Calendars(ctx, row.ID)
 	if err != nil {
 		return err
 	}
 
-	prov, err := newGoogleProvider(ctx, cfg, oauthCfg, tokStore, acct.Ref())
+	prov, err := buildProvider(ctx, cfg, acct, tokStore)
 	if err != nil {
 		return err
 	}
@@ -81,7 +74,7 @@ func runSyncOnce(ctx context.Context, args []string, log *slog.Logger) error {
 		if !cal.Enabled || (*calendarID != "" && cal.RemoteID != *calendarID) {
 			continue
 		}
-		res, err := sy.Calendar(ctx, prov, normalize.Event, cal, model.ProviderGoogle, row.Person)
+		res, err := sy.Calendar(ctx, prov, normalize.Event, cal, acct.Provider, row.Person)
 		if err != nil {
 			failed++
 			log.Error("calendar sync failed", "calendar", cal.RemoteID, "err", err)

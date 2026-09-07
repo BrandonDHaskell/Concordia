@@ -20,12 +20,24 @@ username = "brandon@example.com"
 # from the systemd credential "google_oauth" and this line is omitted.
 credential_file = "google_oauth.json"
 
+[graph]
+# A Microsoft Entra "Mobile and desktop" app is a public client: the client id
+# and tenant are not secrets, and there is no client secret.
+client_id = "00000000-0000-0000-0000-000000000000"
+tenant    = "common"   # or "organizations", "consumers", or a tenant GUID
+
 [[account]]
 person   = "brandon"
 provider = "google"
 name     = "Gmail"
 # credential_ref defaults to a slug of name ("gmail"); the OAuth token is stored
 # at <state-dir>/tokens/gmail.json. Run: concordiad auth google --account Gmail
+
+[[account]]
+person   = "brandon"
+provider = "graph"
+name     = "Work Outlook"
+# Run: concordiad auth graph --account "Work Outlook"
 
 [[rule]]
 match_calendar = "Work"

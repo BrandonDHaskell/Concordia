@@ -19,11 +19,17 @@ import (
 const authFlowTimeout = 5 * time.Minute
 
 func runAuth(ctx context.Context, args []string, log *slog.Logger) error {
-	if len(args) == 0 || args[0] != "google" {
-		return fmt.Errorf("usage: concordiad auth google --account <name> [--open]")
+	if len(args) == 0 {
+		return fmt.Errorf("usage: concordiad auth <google|graph> --account <name> [--open]")
+	}
+	providerKind := args[0]
+	switch providerKind {
+	case config.ProviderGoogle, config.ProviderGraph:
+	default:
+		return fmt.Errorf("unknown auth provider %q (want google or graph)", providerKind)
 	}
 
-	fs := flag.NewFlagSet("auth google", flag.ExitOnError)
+	fs := flag.NewFlagSet("auth "+providerKind, flag.ExitOnError)
 	configPath := fs.String("config", "config.toml", "path to the TOML config file")
 	account := fs.String("account", "", "config account name (or credential ref) to authorize")
 	open := fs.Bool("open", false, "open the authorization URL in a browser")
@@ -42,15 +48,14 @@ func runAuth(ctx context.Context, args []string, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	if acct.Provider != config.ProviderGoogle {
-		return fmt.Errorf("account %q has provider %q, not google", acct.Name, acct.Provider)
+	if acct.Provider != providerKind {
+		return fmt.Errorf("account %q has provider %q, not %q", acct.Name, acct.Provider, providerKind)
 	}
 
-	oauthCfg, err := loadGoogleOAuthConfig(cfg)
+	oauthCfg, err := oauthConfigFor(cfg, acct)
 	if err != nil {
 		return err
 	}
-
 	tokStore, err := authFileTokenStore(cfg)
 	if err != nil {
 		return err
@@ -89,7 +94,7 @@ func runAuth(ctx context.Context, args []string, log *slog.Logger) error {
 		return err
 	}
 
-	prov, err := newGoogleProvider(ctx, cfg, oauthCfg, tokStore, acct.Ref())
+	prov, err := buildProvider(ctx, cfg, acct, tokStore)
 	if err != nil {
 		return err
 	}
@@ -105,7 +110,8 @@ func runAuth(ctx context.Context, args []string, log *slog.Logger) error {
 	}
 
 	log.Info("account authorized",
-		"account", acct.Name, "credential_ref", acct.Ref(), "calendars", len(cals))
+		"account", acct.Name, "provider", acct.Provider,
+		"credential_ref", acct.Ref(), "calendars", len(cals))
 	fmt.Fprintf(os.Stderr, "\nAuthorized %s (%s). %d calendars:\n", acct.Name, acct.Ref(), len(cals))
 	for _, c := range cals {
 		fmt.Fprintf(os.Stderr, "  %-45s %s\n", c.RemoteID, c.DisplayName)

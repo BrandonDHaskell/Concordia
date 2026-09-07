@@ -1,0 +1,33 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+  "@odata.deltaLink": "{{BASE}}/me/calendars/cal1/calendarView/delta?$deltatoken=DELTA1",
+  "value": [
+    {
+      "@odata.etag": "W/\"ev3v1\"",
+      "id": "EV3_OCC_20260921",
+      "iCalUId": "ical-series",
+      "subject": "Weekly review",
+      "type": "occurrence",
+      "seriesMasterId": "SERIES1",
+      "isAllDay": false,
+      "isCancelled": false,
+      "start": { "dateTime": "2026-09-21T17:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-21T17:30:00.0000000", "timeZone": "UTC" }
+    },
+    {
+      "@odata.etag": "W/\"masterv1\"",
+      "id": "SERIES1",
+      "iCalUId": "ical-series",
+      "subject": "Weekly review",
+      "type": "seriesMaster",
+      "isAllDay": false,
+      "isCancelled": false,
+      "start": { "dateTime": "2026-09-07T17:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-07T17:30:00.0000000", "timeZone": "UTC" },
+      "recurrence": {
+        "pattern": { "type": "weekly", "interval": 1, "daysOfWeek": ["monday"] },
+        "range": { "type": "noEnd", "startDate": "2026-09-07" }
+      }
+    }
+  ]
+}
