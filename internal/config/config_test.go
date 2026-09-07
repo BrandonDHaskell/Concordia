@@ -281,6 +281,23 @@ name     = "Work Outlook"`
 	}
 }
 
+func TestServeTimezone(t *testing.T) {
+	cfg, err := Load(writeConfig(t, serverOK+"\n[serve]\ntimezone = \"America/Los_Angeles\"\n"))
+	if err != nil {
+		t.Fatalf("valid zone: %v", err)
+	}
+	if cfg.Serve.Location().String() != "America/Los_Angeles" {
+		t.Errorf("Location = %s", cfg.Serve.Location())
+	}
+
+	if _, err := Load(writeConfig(t, serverOK+"\n[serve]\n")); err != nil {
+		t.Errorf("empty [serve] should be fine: %v", err)
+	}
+	if _, err := Load(writeConfig(t, serverOK+"\n[serve]\ntimezone = \"Mars/Olympus\"\n")); err == nil {
+		t.Error("bad timezone should fail validation")
+	}
+}
+
 func TestAccountRef(t *testing.T) {
 	tests := []struct {
 		name string
