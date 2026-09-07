@@ -1,0 +1,30 @@
+{
+  "kind": "calendar#events",
+  "etag": "\"retag\"",
+  "summary": "brandon@example.com",
+  "timeZone": "America/Los_Angeles",
+  "nextSyncToken": "SYNC3",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "etag": "\"rec-master-v1\"",
+      "id": "rec1",
+      "status": "confirmed",
+      "summary": "Weekly sync",
+      "start": { "dateTime": "2026-09-07T10:00:00-07:00", "timeZone": "America/Los_Angeles" },
+      "end": { "dateTime": "2026-09-07T10:30:00-07:00", "timeZone": "America/Los_Angeles" },
+      "recurrence": [ "RRULE:FREQ=WEEKLY;BYDAY=MO" ]
+    },
+    {
+      "kind": "calendar#event",
+      "etag": "\"rec-override-v1\"",
+      "id": "rec1_20260914T170000Z",
+      "status": "confirmed",
+      "summary": "Weekly sync (moved)",
+      "recurringEventId": "rec1",
+      "originalStartTime": { "dateTime": "2026-09-14T10:00:00-07:00", "timeZone": "America/Los_Angeles" },
+      "start": { "dateTime": "2026-09-14T11:00:00-07:00", "timeZone": "America/Los_Angeles" },
+      "end": { "dateTime": "2026-09-14T11:30:00-07:00", "timeZone": "America/Los_Angeles" }
+    }
+  ]
+}

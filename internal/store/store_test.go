@@ -73,16 +73,23 @@ func TestMigrateIsIdempotent(t *testing.T) {
 	if err := s.Migrate(ctx); err != nil {
 		t.Fatalf("Migrate #1: %v", err)
 	}
+	var after1 int
+	if err := s.db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&after1); err != nil {
+		t.Fatalf("count schema_migrations: %v", err)
+	}
+	if after1 == 0 {
+		t.Fatal("no migrations recorded")
+	}
+
 	if err := s.Migrate(ctx); err != nil {
 		t.Fatalf("Migrate #2: %v", err)
 	}
-
-	var n int
-	if err := s.db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil {
+	var after2 int
+	if err := s.db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&after2); err != nil {
 		t.Fatalf("count schema_migrations: %v", err)
 	}
-	if n != 1 {
-		t.Errorf("schema_migrations rows = %d, want 1", n)
+	if after2 != after1 {
+		t.Errorf("second Migrate changed row count: %d -> %d", after1, after2)
 	}
 }
 

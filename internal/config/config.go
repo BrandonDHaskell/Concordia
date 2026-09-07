@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -29,9 +30,18 @@ const (
 // Config is the fully parsed and validated configuration.
 type Config struct {
 	Server   Server    `toml:"server"`
+	Google   Google    `toml:"google"`
 	Accounts []Account `toml:"account"`
 	Rules    []Rule    `toml:"rule"`
 	Views    []View    `toml:"view"`
+}
+
+// Google holds settings shared by all Google accounts.
+type Google struct {
+	// CredentialFile is a dev fallback path to the downloaded OAuth client
+	// secret. In production the secret comes from the systemd credential
+	// "google_oauth" instead.
+	CredentialFile string `toml:"credential_file"`
 }
 
 // Server holds process-wide settings.
@@ -43,13 +53,41 @@ type Server struct {
 }
 
 // Account is one provider login belonging to one person. Credentials are never
-// stored here; CredentialRef names an out-of-band secret.
+// stored here; the credential ref names an out-of-band secret (a token file).
 type Account struct {
 	Person        string `toml:"person"`
 	Provider      string `toml:"provider"`
 	Name          string `toml:"name"`
 	Username      string `toml:"username"`
 	CredentialRef string `toml:"credential_ref"`
+}
+
+// Ref returns the account's credential ref: the configured value, or a slug of
+// the display name when unset. It is a single safe filename component.
+func (a Account) Ref() string {
+	if a.CredentialRef != "" {
+		return a.CredentialRef
+	}
+	return slug(a.Name)
+}
+
+// slug reduces s to lowercase ASCII alphanumerics and single hyphens.
+func slug(s string) string {
+	var b strings.Builder
+	lastHyphen := false
+	for _, r := range strings.ToLower(s) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastHyphen = false
+		default:
+			if b.Len() > 0 && !lastHyphen {
+				b.WriteByte('-')
+				lastHyphen = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "-")
 }
 
 // Rule matches occurrences and applies an action during materialization.
@@ -94,10 +132,15 @@ func (c *Config) validate() error {
 	if err := c.Server.validate(); err != nil {
 		return fmt.Errorf("[server]: %w", err)
 	}
+	seenRef := make(map[string]bool, len(c.Accounts))
 	for i, a := range c.Accounts {
 		if err := a.validate(); err != nil {
 			return fmt.Errorf("[[account]] %d (%q): %w", i, a.Name, err)
 		}
+		if seenRef[a.Ref()] {
+			return fmt.Errorf("[[account]] %d (%q): credential ref %q collides with another account", i, a.Name, a.Ref())
+		}
+		seenRef[a.Ref()] = true
 	}
 	for i, r := range c.Rules {
 		if err := r.validate(); err != nil {
@@ -142,6 +185,9 @@ func (a *Account) validate() error {
 	}
 	if a.Name == "" {
 		return fmt.Errorf("name is required")
+	}
+	if ref := a.Ref(); ref == "" || strings.ContainsAny(ref, `/\`) || ref == "." || ref == ".." {
+		return fmt.Errorf("credential ref %q is not a valid filename component (set credential_ref explicitly)", ref)
 	}
 	switch a.Provider {
 	case ProviderICloud:

@@ -6,10 +6,14 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "modernc.org/sqlite"
 )
+
+// ErrNotFound is returned by lookups that match no row.
+var ErrNotFound = errors.New("store: not found")
 
 // Store is a handle to the SQLite database.
 type Store struct {
@@ -57,4 +61,19 @@ func (s *Store) DB() *sql.DB {
 // Close releases the database handle.
 func (s *Store) Close() error {
 	return s.db.Close()
+}
+
+// WithTx runs fn inside a transaction, committing if it returns nil and rolling
+// back otherwise. The sync path uses this so a calendar's new sync token lands
+// in the same transaction as the events it describes.
+func (s *Store) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }

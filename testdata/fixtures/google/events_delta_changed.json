@@ -1,0 +1,24 @@
+{
+  "kind": "calendar#events",
+  "etag": "\"d1etag\"",
+  "summary": "brandon@example.com",
+  "timeZone": "America/Los_Angeles",
+  "nextSyncToken": "SYNC2",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "etag": "\"ev1-v2\"",
+      "id": "ev1",
+      "status": "confirmed",
+      "summary": "Team standup (moved)",
+      "start": { "dateTime": "2026-09-10T09:30:00-07:00", "timeZone": "America/Los_Angeles" },
+      "end": { "dateTime": "2026-09-10T09:45:00-07:00", "timeZone": "America/Los_Angeles" }
+    },
+    {
+      "kind": "calendar#event",
+      "etag": "\"ev2-v2\"",
+      "id": "ev2",
+      "status": "cancelled"
+    }
+  ]
+}
