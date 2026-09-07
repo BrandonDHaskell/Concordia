@@ -53,3 +53,28 @@ predicate = "owner:brandon and tag:kids"
 ```
 
 Inspect the result: `concordiad occurrences [--owner X] [--tag Y] [--view Z] [--days N]`.
+
+## Connecting a client
+
+The daemon serves read-only CalDAV and ICS on `[server] listen`.
+
+**CalDAV** (DAVx5, KOrganizer, iOS/macOS Calendar): point the client at
+
+```
+http://tranquility:8080/dav/principal/
+```
+
+It discovers one collection per person (`.../cal/p-<name>/`) and one per view
+(`.../cal/v-<view>/`). Writes are refused. There is no `sync-collection` yet, so
+clients do periodic full pulls; set the refresh interval to a few minutes.
+
+**ICS subscription** (anything that takes a URL):
+
+```
+http://tranquility:8080/feeds/all.ics          every person, merged
+http://tranquility:8080/feeds/p-<name>.ics      one person
+http://tranquility:8080/feeds/v-<view>.ics      one view
+```
+
+Set `[serve] summary_prefix = true` if a merged view needs `[owner]` on each
+event to tell people apart.

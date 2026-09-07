@@ -58,8 +58,9 @@ type OccurrenceQuery struct {
 }
 
 // OccurrenceRow is one materialized occurrence with its calendar and tags, for
-// display and feeds.
+// display and feeds. EventUID plus Start form a resource's stable identity.
 type OccurrenceRow struct {
+	EventUID     string
 	Start        time.Time
 	End          time.Time
 	StartLocal   string
@@ -67,8 +68,10 @@ type OccurrenceRow struct {
 	Summary      string
 	Location     string
 	Owner        string
+	Status       string
 	CalendarName string
 	Tags         []string
+	LastModified time.Time
 }
 
 // Occurrences returns occurrences overlapping [From, To), optionally filtered
@@ -86,8 +89,9 @@ func (s *Store) Occurrences(ctx context.Context, q OccurrenceQuery) ([]Occurrenc
 	}
 
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT o.start_utc, o.end_utc, o.start_local, o.is_all_day,
-		       o.summary, o.location, o.owner, c.display_name,
+		SELECT e.uid, o.start_utc, o.end_utc, o.start_local, o.is_all_day,
+		       o.summary, o.location, o.owner, COALESCE(e.status, ''),
+		       c.display_name, COALESCE(e.updated_at, ''),
 		       COALESCE(GROUP_CONCAT(ot.tag, char(31)), '')
 		FROM occurrences o
 		JOIN events e ON e.id = o.event_id
@@ -107,13 +111,19 @@ func (s *Store) Occurrences(ctx context.Context, q OccurrenceQuery) ([]Occurrenc
 			r                OccurrenceRow
 			startUTC, endUTC string
 			allDay           int
-			tags             string
+			updatedAt, tags  string
 		)
-		if err := rows.Scan(&startUTC, &endUTC, &r.StartLocal, &allDay,
-			&r.Summary, &r.Location, &r.Owner, &r.CalendarName, &tags); err != nil {
+		if err := rows.Scan(&r.EventUID, &startUTC, &endUTC, &r.StartLocal, &allDay,
+			&r.Summary, &r.Location, &r.Owner, &r.Status, &r.CalendarName,
+			&updatedAt, &tags); err != nil {
 			return nil, fmt.Errorf("store: scanning occurrence: %w", err)
 		}
 		r.AllDay = allDay != 0
+		if updatedAt != "" {
+			if t, perr := time.Parse(timeLayout, updatedAt); perr == nil {
+				r.LastModified = t
+			}
+		}
 		if r.Start, err = decodeOccurrenceTime(startUTC, r.AllDay); err != nil {
 			return nil, fmt.Errorf("store: occurrence start %q: %w", startUTC, err)
 		}

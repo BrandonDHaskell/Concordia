@@ -32,11 +32,32 @@ const (
 // Config is the fully parsed and validated configuration.
 type Config struct {
 	Server   Server    `toml:"server"`
+	Serve    Serve     `toml:"serve"`
 	Google   Google    `toml:"google"`
 	Graph    Graph     `toml:"graph"`
 	Accounts []Account `toml:"account"`
 	Rules    []Rule    `toml:"rule"`
 	Views    []View    `toml:"view"`
+}
+
+// Serve holds output-side settings.
+type Serve struct {
+	// SummaryPrefix prepends "[owner] " to every event summary in CalDAV
+	// collections and ICS feeds, for clients that show one merged calendar.
+	SummaryPrefix bool `toml:"summary_prefix"`
+}
+
+// People returns the distinct persons across all accounts, in first-seen order.
+func (c *Config) People() []string {
+	seen := make(map[string]bool)
+	var out []string
+	for _, a := range c.Accounts {
+		if a.Person != "" && !seen[a.Person] {
+			seen[a.Person] = true
+			out = append(out, a.Person)
+		}
+	}
+	return out
 }
 
 // Google holds settings shared by all Google accounts.

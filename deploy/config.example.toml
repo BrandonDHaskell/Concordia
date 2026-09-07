@@ -8,6 +8,11 @@ database    = "concordia.db"
 window_back = "60d"
 window_fwd  = "400d"
 
+[serve]
+# Prefix every event summary with "[owner] " in CalDAV collections and ICS
+# feeds. Helpful for clients that show one merged calendar, noisy otherwise.
+summary_prefix = false
+
 [[account]]
 person   = "brandon"
 provider = "icloud"
