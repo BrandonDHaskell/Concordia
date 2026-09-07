@@ -17,8 +17,12 @@ var ErrNotFound = errors.New("store: not found")
 
 // Store is a handle to the SQLite database.
 type Store struct {
-	db *sql.DB
+	db   *sql.DB
+	path string
 }
+
+// Path is the database file path this store was opened with.
+func (s *Store) Path() string { return s.path }
 
 // Open opens (creating if needed) the SQLite database at path in WAL mode with
 // foreign keys enforced and a busy timeout set. It does not run migrations;
@@ -44,7 +48,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		return nil, fmt.Errorf("store: ping %s: %w", path, err)
 	}
 
-	return &Store{db: db}, nil
+	return &Store{db: db, path: path}, nil
 }
 
 // Ping verifies the database is reachable.
