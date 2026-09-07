@@ -21,6 +21,7 @@ type graphEvent struct {
 	Location *struct {
 		DisplayName string `json:"displayName"`
 	} `json:"location"`
+	Categories   []string   `json:"categories"`
 	Start        *graphTime `json:"start"`
 	End          *graphTime `json:"end"`
 	IsAllDay     bool       `json:"isAllDay"`
@@ -63,6 +64,9 @@ func Graph(raw provider.RawEvent, cal model.Calendar) (model.Event, error) {
 	}
 	if ts := parseTimestamp(ge.LastModified); !ts.IsZero() {
 		ev.UpdatedAt = ts
+	}
+	for _, c := range ge.Categories {
+		ev.SourceTags = addTag(ev.SourceTags, c)
 	}
 
 	if err := applyGraphTimes(&ev, ge); err != nil {

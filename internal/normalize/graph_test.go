@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -84,6 +85,20 @@ func TestGraphOccurrenceIsIndependent(t *testing.T) {
 	}
 	if a.Recurring() || b.Recurring() {
 		t.Error("a Graph occurrence carries an RRULE")
+	}
+}
+
+func TestGraphCategoriesBecomeTags(t *testing.T) {
+	ev, err := Graph(graphRaw(`{
+		"id": "EV1", "subject": "Match", "type": "singleInstance",
+		"categories": ["Kids", "Weekend Sports"],
+		"start": {"dateTime": "2026-09-10T16:00:00.0000000", "timeZone": "UTC"}
+	}`), plainCal)
+	if err != nil {
+		t.Fatalf("Graph: %v", err)
+	}
+	if strings.Join(ev.SourceTags, ",") != "kids,weekend-sports" {
+		t.Errorf("SourceTags = %v, want [kids weekend-sports]", ev.SourceTags)
 	}
 }
 

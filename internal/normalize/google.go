@@ -21,6 +21,7 @@ type googleEvent struct {
 	Status            string      `json:"status"`
 	Summary           string      `json:"summary"`
 	Location          string      `json:"location"`
+	ColorID           string      `json:"colorId"`
 	Start             *googleTime `json:"start"`
 	End               *googleTime `json:"end"`
 	Recurrence        []string    `json:"recurrence"`
@@ -36,6 +37,17 @@ type googleTime struct {
 }
 
 func (gt *googleTime) allDay() bool { return gt != nil && gt.Date != "" }
+
+// googleColorName maps an event colorId to its Google Calendar palette name.
+// Household members recolor events in the app they already use; the color name
+// becomes a tag with no config required.
+var googleColorNames = map[string]string{
+	"1": "lavender", "2": "sage", "3": "grape", "4": "flamingo",
+	"5": "banana", "6": "tangerine", "7": "peacock", "8": "graphite",
+	"9": "blueberry", "10": "basil", "11": "tomato",
+}
+
+func googleColorName(colorID string) string { return googleColorNames[colorID] }
 
 // Google normalizes one raw Google Calendar event.
 func Google(raw provider.RawEvent, cal model.Calendar) (model.Event, error) {
@@ -59,6 +71,9 @@ func Google(raw provider.RawEvent, cal model.Calendar) (model.Event, error) {
 	}
 	if ts := parseTimestamp(ge.Updated); !ts.IsZero() {
 		ev.UpdatedAt = ts
+	}
+	if name := googleColorName(ge.ColorID); name != "" {
+		ev.SourceTags = addTag(ev.SourceTags, name)
 	}
 
 	if err := applyTimes(&ev, ge); err != nil {

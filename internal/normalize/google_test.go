@@ -167,6 +167,40 @@ func TestGoogleCancelledInstance(t *testing.T) {
 	}
 }
 
+func TestGoogleColorIdBecomesTag(t *testing.T) {
+	ev, err := Google(raw(`{
+		"id": "e", "status": "confirmed", "summary": "Soccer", "colorId": "11",
+		"start": {"date": "2026-09-10"}
+	}`), plainCal)
+	if err != nil {
+		t.Fatalf("Google: %v", err)
+	}
+	if len(ev.SourceTags) != 1 || ev.SourceTags[0] != "tomato" {
+		t.Errorf("SourceTags = %v, want [tomato]", ev.SourceTags)
+	}
+}
+
+func TestGoogleNoColorIdNoTag(t *testing.T) {
+	ev, _ := Google(raw(`{"id":"e","status":"confirmed","start":{"date":"2026-09-10"}}`), plainCal)
+	if len(ev.SourceTags) != 0 {
+		t.Errorf("SourceTags = %v, want none", ev.SourceTags)
+	}
+}
+
+func TestGoogleColorTagSurvivesRedaction(t *testing.T) {
+	ev, _ := Google(raw(`{
+		"id": "e", "status": "confirmed", "summary": "Therapy", "colorId": "3",
+		"start": {"dateTime": "2026-09-10T09:00:00-07:00", "timeZone": "America/Los_Angeles"},
+		"end":   {"dateTime": "2026-09-10T10:00:00-07:00", "timeZone": "America/Los_Angeles"}
+	}`), model.Calendar{ID: 1, Redact: true})
+	if ev.Summary != RedactedSummary {
+		t.Fatal("not redacted")
+	}
+	if len(ev.SourceTags) != 1 || ev.SourceTags[0] != "grape" {
+		t.Errorf("color tag dropped by redaction: %v", ev.SourceTags)
+	}
+}
+
 func TestGoogleRedaction(t *testing.T) {
 	body := `{
 		"id": "secret", "iCalUID": "s@google.com", "status": "confirmed",
