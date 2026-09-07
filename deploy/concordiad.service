@@ -1,0 +1,29 @@
+[Unit]
+Description=Concordia household calendar aggregator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/concordiad -config /etc/concordia/config.toml
+Restart=on-failure
+RestartSec=5
+
+User=concordia
+Group=concordia
+StateDirectory=concordia
+ConfigurationDirectory=concordia
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target
