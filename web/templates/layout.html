@@ -50,9 +50,9 @@
 {{- if .Days -}}
 {{range .Days}}
 <section class="day{{if .Today}} today{{end}}">
-  <h2>{{.Label}}</h2>
+  <h2>{{.Label}}{{if .Conflicts}} <span class="day-warn">{{.Conflicts}} overlapping</span>{{end}}</h2>
   {{- range .Events}}
-  <div class="event {{.OwnerClass}}{{if .Tentative}} tentative{{end}}">
+  <div class="event {{.OwnerClass}}{{if .Tentative}} tentative{{end}}{{if .Conflict}} conflict{{end}}">
     <span class="time">{{.Time}}</span>
     <span class="rail"></span>
     <div class="body">
@@ -60,6 +60,7 @@
       <div class="meta">
         {{- with .Calendar}}<span class="cal">{{.}}</span>{{end -}}
         <span>{{.Owner}}</span>
+        {{- if .Conflict}}<span class="warn">overlaps</span>{{end -}}
         {{- range .Tags}}<span class="tag">{{.}}</span>{{end -}}
       </div>
     </div>

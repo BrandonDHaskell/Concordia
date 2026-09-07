@@ -105,9 +105,10 @@ type agendaData struct {
 }
 
 type dayGroup struct {
-	Label  string
-	Today  bool
-	Events []eventRow
+	Label     string
+	Today     bool
+	Conflicts int
+	Events    []eventRow
 }
 
 type eventRow struct {
@@ -118,6 +119,7 @@ type eventRow struct {
 	Calendar   string
 	Tags       []string
 	Tentative  bool
+	Conflict   bool
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request)    { s.renderWeb(w, r, "layout") }
@@ -164,7 +166,7 @@ func (s *Server) renderWeb(w http.ResponseWriter, r *http.Request, tmpl string) 
 	data := pageData{
 		Title:  "Concordia",
 		Chips:  s.buildChips(f, tagSet),
-		Agenda: agendaData{Days: groupByDay(shown, loc, now)},
+		Agenda: agendaData{Days: groupByDay(shown, markConflicts(shown), loc, now)},
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -216,14 +218,14 @@ func (s *Server) webViewPredicate(name string) views.Predicate {
 	return nil
 }
 
-func groupByDay(rows []store.OccurrenceRow, loc *time.Location, now time.Time) []dayGroup {
+func groupByDay(rows []store.OccurrenceRow, conflict map[int]bool, loc *time.Location, now time.Time) []dayGroup {
 	today := dateKey(now)
 	tomorrow := dateKey(now.AddDate(0, 0, 1))
 
 	var days []dayGroup
 	var cur *dayGroup
 	var curKey string
-	for _, row := range rows {
+	for i, row := range rows {
 		local := row.Start.In(loc)
 		key := dateKey(local)
 		if cur == nil || key != curKey {
@@ -246,9 +248,40 @@ func groupByDay(rows []store.OccurrenceRow, loc *time.Location, now time.Time) [
 			Calendar:   row.CalendarName,
 			Tags:       row.Tags,
 			Tentative:  row.Status == "tentative",
+			Conflict:   conflict[i],
 		})
+		if conflict[i] {
+			cur.Conflicts++
+		}
 	}
 	return days
+}
+
+// markConflicts returns the indices of timed occurrences that overlap at least
+// one other. rows must be sorted by start. All-day events do not participate.
+func markConflicts(rows []store.OccurrenceRow) map[int]bool {
+	conflict := make(map[int]bool)
+	var active []int // indices whose End is still ahead of the current start
+	for i, r := range rows {
+		if r.AllDay || !r.End.After(r.Start) {
+			continue
+		}
+		kept := active[:0]
+		for _, j := range active {
+			if rows[j].End.After(r.Start) {
+				kept = append(kept, j)
+			}
+		}
+		active = kept
+		if len(active) > 0 {
+			conflict[i] = true
+			for _, j := range active {
+				conflict[j] = true
+			}
+		}
+		active = append(active, i)
+	}
+	return conflict
 }
 
 func eventTime(row store.OccurrenceRow, loc *time.Location) string {
