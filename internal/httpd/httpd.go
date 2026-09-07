@@ -1,6 +1,6 @@
-// Package httpd serves the Concordia web surface: a health endpoint, read-only
-// ICS feeds, and (mounted here) the CalDAV handler. The agenda view and SSE
-// arrive in a later milestone.
+// Package httpd serves the Concordia web surface: the agenda web view, a health
+// endpoint, read-only ICS feeds, and (mounted here) the CalDAV handler. SSE
+// live updates arrive in a later milestone.
 package httpd
 
 import (
@@ -8,6 +8,8 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"html/template"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -16,6 +18,7 @@ import (
 	"github.com/bhaskell/Concordia/internal/icsout"
 	"github.com/bhaskell/Concordia/internal/store"
 	"github.com/bhaskell/Concordia/internal/views"
+	"github.com/bhaskell/Concordia/web"
 )
 
 // Health is the subset of the store the health check needs.
@@ -40,6 +43,9 @@ type Config struct {
 	SummaryPrefix bool
 	WindowBack    time.Duration
 	WindowFwd     time.Duration
+	// DisplayTZ is the zone the web view renders timed events in. Defaults to
+	// time.Local.
+	DisplayTZ *time.Location
 	// DAVHandler is mounted at /dav/ when non-nil.
 	DAVHandler http.Handler
 	Log        *slog.Logger
@@ -53,6 +59,7 @@ type Server struct {
 	cfg  Config
 	log  *slog.Logger
 	now  func() time.Time
+	tmpl *template.Template
 	byID map[string]Feed
 }
 
@@ -66,13 +73,19 @@ func New(cfg Config) *Server {
 		cfg:  cfg,
 		log:  cfg.Log,
 		now:  now,
+		tmpl: template.Must(template.ParseFS(web.Templates, "templates/*.html")),
 		byID: make(map[string]Feed, len(cfg.Feeds)),
 	}
 	for _, f := range cfg.Feeds {
 		s.byID[f.Slug] = f
 	}
 
+	staticFS, _ := fs.Sub(web.Static, "static")
+
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /{$}", s.handleIndex)
+	mux.HandleFunc("GET /view", s.handleViewFrag)
+	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheControl(http.FileServerFS(staticFS))))
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	mux.HandleFunc("GET /feeds/{name}", s.handleFeed)
 	if cfg.DAVHandler != nil {
@@ -89,6 +102,21 @@ func New(cfg Config) *Server {
 
 // Handler returns the server's routes, for testing.
 func (s *Server) Handler() http.Handler { return s.srv.Handler }
+
+func (s *Server) displayLoc() *time.Location {
+	if s.cfg.DisplayTZ != nil {
+		return s.cfg.DisplayTZ
+	}
+	return time.Local
+}
+
+// cacheControl adds a day-long cache header to vendored static assets.
+func cacheControl(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		h.ServeHTTP(w, r)
+	})
+}
 
 // Run listens and serves until ctx is cancelled, then shuts down gracefully.
 func (s *Server) Run(ctx context.Context) error {
