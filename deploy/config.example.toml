@@ -1,0 +1,38 @@
+# On tranquility, override listen and database in /etc/concordia/config.toml.
+# The systemd unit runs with StateDirectory=concordia, so the deployed path is
+# database = "/var/lib/concordia/concordia.db". This example points at the
+# working directory so `make run` works from a checkout.
+[server]
+listen      = "127.0.0.1:8080"
+database    = "concordia.db"
+window_back = "60d"
+window_fwd  = "400d"
+
+[[account]]
+person   = "brandon"
+provider = "icloud"
+name     = "iCloud"
+username = "brandon@example.com"
+# app-specific password read from the credential file, not stored here
+
+[[account]]
+person   = "brandon"
+provider = "google"
+name     = "Gmail"
+
+[[rule]]
+match_calendar = "Work"
+action         = "redact"
+
+[[rule]]
+match_title = "(?i)soccer|practice"
+action      = "tag"
+tag         = "kids"
+
+[[view]]
+name      = "no-work"
+predicate = "not tag:work"
+
+[[view]]
+name      = "kids"
+predicate = "tag:kids"
