@@ -1,0 +1,27 @@
+{
+  "kind": "calendar#events",
+  "etag": "\"p1etag\"",
+  "summary": "brandon@example.com",
+  "timeZone": "America/Los_Angeles",
+  "nextPageToken": "PAGE2",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "etag": "\"ev1-v1\"",
+      "id": "ev1",
+      "status": "confirmed",
+      "summary": "Team standup",
+      "start": { "dateTime": "2026-09-10T09:00:00-07:00", "timeZone": "America/Los_Angeles" },
+      "end": { "dateTime": "2026-09-10T09:15:00-07:00", "timeZone": "America/Los_Angeles" }
+    },
+    {
+      "kind": "calendar#event",
+      "etag": "\"ev2-v1\"",
+      "id": "ev2",
+      "status": "confirmed",
+      "summary": "Trip",
+      "start": { "date": "2026-09-14" },
+      "end": { "date": "2026-09-18" }
+    }
+  ]
+}

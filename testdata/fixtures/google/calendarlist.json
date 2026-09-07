@@ -1,0 +1,22 @@
+{
+  "kind": "calendar#calendarList",
+  "etag": "\"cletag\"",
+  "items": [
+    {
+      "kind": "calendar#calendarListEntry",
+      "etag": "\"cl1\"",
+      "id": "brandon@example.com",
+      "summary": "brandon@example.com",
+      "primary": true,
+      "accessRole": "owner"
+    },
+    {
+      "kind": "calendar#calendarListEntry",
+      "etag": "\"cl2\"",
+      "id": "family123@group.calendar.google.com",
+      "summary": "Family",
+      "summaryOverride": "Household",
+      "accessRole": "reader"
+    }
+  ]
+}
