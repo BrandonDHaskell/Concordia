@@ -103,9 +103,10 @@ func (s *Store) EnabledCalendars(ctx context.Context) ([]model.Calendar, error) 
 }
 
 // SetSyncToken records a successful sync of a calendar: the new delta token,
-// the sync time, and a cleared error. See WithTx for co-persisting event data.
-func (s *Store) SetSyncToken(ctx context.Context, calID int64, token string, syncedAt time.Time) error {
-	_, err := s.db.ExecContext(ctx, `
+// the sync time, and a cleared error. It takes a transaction because the token
+// must be persisted together with the event data it describes (invariant 9).
+func (s *Store) SetSyncToken(ctx context.Context, tx *sql.Tx, calID int64, token string, syncedAt time.Time) error {
+	_, err := tx.ExecContext(ctx, `
 		UPDATE calendars SET sync_token = ?, last_sync_at = ?, last_error = ''
 		WHERE id = ?`, token, syncedAt.UTC().Format(timeLayout), calID)
 	if err != nil {

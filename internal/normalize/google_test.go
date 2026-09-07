@@ -157,8 +157,13 @@ func TestGoogleCancelledInstance(t *testing.T) {
 	if ev.RecurrenceID != "2026-09-28T17:00:00Z" {
 		t.Errorf("RecurrenceID = %q", ev.RecurrenceID)
 	}
-	if !ev.Start.IsZero() {
-		t.Errorf("cancelled instance has a Start: %v", ev.Start)
+	// Start is taken from originalStartTime so storage has something coherent;
+	// expansion ignores it and suppresses the instance by RecurrenceID.
+	if ev.Start.IsZero() {
+		t.Error("cancelled instance should borrow Start from originalStartTime")
+	}
+	if h, _, _ := ev.Start.UTC().Clock(); h != 17 {
+		t.Errorf("borrowed Start = %s, want 17:00Z", ev.Start.UTC())
 	}
 }
 

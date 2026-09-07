@@ -83,15 +83,20 @@ func Google(raw provider.RawEvent, cal model.Calendar) (model.Event, error) {
 	return ev, nil
 }
 
-// applyTimes fills Start, End, AllDay, and TZID. A cancelled instance may have
-// no start/end at all, which is fine: only its RecurrenceID matters.
+// applyTimes fills Start, End, AllDay, and TZID. A cancelled instance carries
+// no start/end of its own, so it takes them from originalStartTime; only its
+// RecurrenceID actually matters downstream.
 func applyTimes(ev *model.Event, ge googleEvent) error {
-	if ge.Start == nil {
-		if ev.Status == model.StatusCancelled {
-			ev.AllDay = ge.OriginalStartTime.allDay()
-			return nil
-		}
+	src := ge.Start
+	if src == nil && ev.Status == model.StatusCancelled {
+		src = ge.OriginalStartTime
+	}
+	if src == nil {
 		return fmt.Errorf("event has no start")
+	}
+	ge.Start = src
+	if src == ge.OriginalStartTime {
+		ge.End = nil // no explicit end; fall through to the default
 	}
 
 	if ge.Start.allDay() {
