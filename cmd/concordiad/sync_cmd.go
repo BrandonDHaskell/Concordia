@@ -63,9 +63,15 @@ func runSyncOnce(ctx context.Context, args []string, log *slog.Logger) error {
 		return err
 	}
 
+	engine, err := rulesEngine(cfg)
+	if err != nil {
+		return err
+	}
+
 	sy := &syncer.Syncer{
 		Store:  st,
 		Window: model.NewWindow(time.Now(), cfg.Server.WindowBack.Duration(), cfg.Server.WindowFwd.Duration()),
+		Rules:  engine,
 		Log:    log,
 	}
 

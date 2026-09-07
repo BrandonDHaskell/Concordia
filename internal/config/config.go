@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/bhaskell/Concordia/internal/views"
 )
 
 // Supported provider identifiers for an account.
@@ -263,5 +265,27 @@ func (v *View) validate() error {
 	if v.Predicate == "" {
 		return fmt.Errorf("predicate is required")
 	}
+	if _, err := views.Parse(v.Predicate); err != nil {
+		return fmt.Errorf("predicate: %w", err)
+	}
 	return nil
+}
+
+// ParsedViews returns the config views with their predicates compiled.
+func (c *Config) ParsedViews() ([]ParsedView, error) {
+	out := make([]ParsedView, 0, len(c.Views))
+	for _, v := range c.Views {
+		pred, err := views.Parse(v.Predicate)
+		if err != nil {
+			return nil, fmt.Errorf("view %q: %w", v.Name, err)
+		}
+		out = append(out, ParsedView{Name: v.Name, Predicate: pred})
+	}
+	return out, nil
+}
+
+// ParsedView is a named view with a compiled predicate.
+type ParsedView struct {
+	Name      string
+	Predicate views.Predicate
 }

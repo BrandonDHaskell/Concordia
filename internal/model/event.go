@@ -52,6 +52,11 @@ type Event struct {
 	// parameter, so the expander can resolve them in their own zone.
 	EXDates []string
 
+	// SourceTags are tags derived from the provider's own labels (Google
+	// colorId, Outlook categories), assigned in normalize. They survive
+	// calendar-level redaction: a label is not event content.
+	SourceTags []string
+
 	Status    string
 	ETag      string
 	Raw       []byte

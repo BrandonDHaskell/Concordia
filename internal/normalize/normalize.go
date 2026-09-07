@@ -9,6 +9,8 @@ package normalize
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
 	"github.com/bhaskell/Concordia/internal/model"
 	"github.com/bhaskell/Concordia/internal/provider"
@@ -34,4 +36,37 @@ func redact(e *model.Event) {
 	e.Summary = RedactedSummary
 	e.Location = ""
 	e.Raw = nil
+}
+
+// tagSlug normalizes a provider label into a tag: lowercase, with runs of
+// non-alphanumerics collapsed to a single hyphen. "Work Stuff" -> "work-stuff".
+func tagSlug(s string) string {
+	var b strings.Builder
+	hyphen := false
+	for _, r := range strings.ToLower(strings.TrimSpace(s)) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			hyphen = false
+			continue
+		}
+		if b.Len() > 0 && !hyphen {
+			b.WriteByte('-')
+			hyphen = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
+// addTag appends slug(tag) to tags if non-empty and not already present.
+func addTag(tags []string, tag string) []string {
+	s := tagSlug(tag)
+	if s == "" {
+		return tags
+	}
+	for _, t := range tags {
+		if t == s {
+			return tags
+		}
+	}
+	return append(tags, s)
 }

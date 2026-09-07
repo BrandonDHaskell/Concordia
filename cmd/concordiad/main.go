@@ -3,8 +3,9 @@
 // Usage:
 //
 //	concordiad [-config path] [-migrate]        run the daemon (or migrate and exit)
-//	concordiad auth google --account <name>     authorize a Google account
+//	concordiad auth <google|graph> --account …  authorize an account
 //	concordiad sync-once --account <name>       run one sync pass for an account
+//	concordiad occurrences [--view …] […]       list materialized occurrences
 package main
 
 import (
@@ -31,6 +32,9 @@ func main() {
 			return
 		case "sync-once":
 			exitOn(log, "sync-once failed", runSyncOnce(context.Background(), args[1:], log))
+			return
+		case "occurrences":
+			exitOn(log, "occurrences failed", runOccurrences(context.Background(), args[1:], log))
 			return
 		}
 	}
