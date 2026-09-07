@@ -1,0 +1,31 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+  "@odata.nextLink": "{{BASE}}/me/calendars/cal1/calendarView/delta?$skiptoken=SKIP2",
+  "value": [
+    {
+      "@odata.etag": "W/\"ev1v1\"",
+      "id": "EV1",
+      "iCalUId": "ical-ev1",
+      "subject": "Team sync",
+      "type": "singleInstance",
+      "isAllDay": false,
+      "isCancelled": false,
+      "showAs": "busy",
+      "location": { "displayName": "Room 2" },
+      "start": { "dateTime": "2026-09-10T16:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-10T16:30:00.0000000", "timeZone": "UTC" }
+    },
+    {
+      "@odata.etag": "W/\"ev2v1\"",
+      "id": "EV2",
+      "iCalUId": "ical-ev2",
+      "subject": "Conference",
+      "type": "singleInstance",
+      "isAllDay": true,
+      "isCancelled": false,
+      "location": { "displayName": "" },
+      "start": { "dateTime": "2026-09-14T00:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-18T00:00:00.0000000", "timeZone": "UTC" }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "syncStateNotFound",
+    "message": "The sync state generation is not found; please start a new full sync.",
+    "innerError": {
+      "date": "2026-09-06T00:00:00",
+      "request-id": "00000000-0000-0000-0000-000000000000"
+    }
+  }
+}

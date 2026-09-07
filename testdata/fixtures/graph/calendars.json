@@ -1,0 +1,19 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#me/calendars",
+  "value": [
+    {
+      "id": "cal1",
+      "name": "Calendar",
+      "isDefaultCalendar": true,
+      "canEdit": true,
+      "owner": { "name": "Brandon", "address": "brandon@contoso.com" }
+    },
+    {
+      "id": "cal2",
+      "name": "Team events",
+      "isDefaultCalendar": false,
+      "canEdit": false,
+      "owner": { "name": "Team", "address": "team@contoso.com" }
+    }
+  ]
+}

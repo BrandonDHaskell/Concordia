@@ -1,0 +1,32 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(event)",
+  "@odata.deltaLink": "{{BASE}}/me/calendars/cal1/calendarView/delta?$deltatoken=DELTA2",
+  "value": [
+    {
+      "@odata.etag": "W/\"ev1v2\"",
+      "id": "EV1",
+      "iCalUId": "ical-ev1",
+      "subject": "Team sync (rescheduled)",
+      "type": "singleInstance",
+      "isAllDay": false,
+      "isCancelled": false,
+      "start": { "dateTime": "2026-09-10T17:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-10T17:30:00.0000000", "timeZone": "UTC" }
+    },
+    {
+      "id": "EV2",
+      "@removed": { "reason": "deleted" }
+    },
+    {
+      "@odata.etag": "W/\"ev4cancel\"",
+      "id": "EV4",
+      "iCalUId": "ical-ev4",
+      "subject": "Cancelled offsite",
+      "type": "singleInstance",
+      "isAllDay": false,
+      "isCancelled": true,
+      "start": { "dateTime": "2026-09-25T15:00:00.0000000", "timeZone": "UTC" },
+      "end":   { "dateTime": "2026-09-25T16:00:00.0000000", "timeZone": "UTC" }
+    }
+  ]
+}
