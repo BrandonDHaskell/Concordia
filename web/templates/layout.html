@@ -1,0 +1,72 @@
+{{define "layout" -}}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div id="view" hx-target="#view" hx-swap="innerHTML">
+{{- template "view" . -}}
+</div>
+<script src="/static/htmx.min.js"></script>
+</body>
+</html>
+{{- end}}
+
+{{define "view" -}}
+<header>
+  <h1><a href="/" hx-get="/view" hx-push-url="/">Concordia</a></h1>
+  <div class="chips">
+    <div class="chip-group"><span class="chip-label">Who</span>
+      {{- range .Chips.Owners}}{{template "chip" .}}{{end -}}
+    </div>
+    {{- if .Chips.Views}}
+    <div class="chip-group"><span class="chip-label">View</span>
+      {{- range .Chips.Views}}{{template "chip" .}}{{end -}}
+    </div>
+    {{- end}}
+    {{- if .Chips.Tags}}
+    <div class="chip-group"><span class="chip-label">Tag</span>
+      {{- range .Chips.Tags}}{{template "chip" .}}{{end -}}
+    </div>
+    {{- end}}
+  </div>
+</header>
+<main>{{template "agenda" .Agenda}}</main>
+{{- end}}
+
+{{define "chip" -}}
+<a class="chip{{if .Active}} active{{end}}{{with .Class}} {{.}}{{end}}"
+   href="/{{.Query}}" hx-get="/view{{.Query}}" hx-push-url="/{{.Query}}">
+{{- if .Class}}<span class="dot"></span>{{end}}{{.Label -}}
+</a>
+{{- end}}
+
+{{define "agenda" -}}
+{{- if .Days -}}
+{{range .Days}}
+<section class="day{{if .Today}} today{{end}}">
+  <h2>{{.Label}}</h2>
+  {{- range .Events}}
+  <div class="event {{.OwnerClass}}{{if .Tentative}} tentative{{end}}">
+    <span class="time">{{.Time}}</span>
+    <span class="rail"></span>
+    <div class="body">
+      <div class="summary">{{.Summary}}</div>
+      <div class="meta">
+        {{- with .Calendar}}<span class="cal">{{.}}</span>{{end -}}
+        <span>{{.Owner}}</span>
+        {{- range .Tags}}<span class="tag">{{.}}</span>{{end -}}
+      </div>
+    </div>
+  </div>
+  {{- end}}
+</section>
+{{end}}
+{{- else -}}
+<p class="empty">Nothing scheduled in this window.</p>
+{{- end -}}
+{{- end}}
