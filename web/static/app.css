@@ -113,6 +113,18 @@ main { padding: 8px 20px 60px; max-width: 900px; }
 .event.tentative .summary { font-style: italic; }
 .event.tentative .summary::after { content: " (tentative)"; color: var(--muted); font-weight: normal; }
 
+.event.conflict { box-shadow: inset 3px 0 0 var(--owner-4); }
+.warn { color: var(--owner-4); font-size: 12px; margin-left: 6px; }
+.warn::before { content: "\26A0\FE0F  "; }
+.day-warn {
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--owner-4);
+  margin-left: 8px;
+}
+
 .owner-0 { --owner-color: var(--owner-0); --dot: var(--owner-0); }
 .owner-1 { --owner-color: var(--owner-1); --dot: var(--owner-1); }
 .owner-2 { --owner-color: var(--owner-2); --dot: var(--owner-2); }

@@ -14,7 +14,7 @@ func TestTemplatesParse(t *testing.T) {
 }
 
 func TestStaticAssetsPresent(t *testing.T) {
-	for _, name := range []string{"static/htmx.min.js", "static/app.css"} {
+	for _, name := range []string{"static/htmx.min.js", "static/app.css", "static/app.js"} {
 		if _, err := fs.Stat(Static, name); err != nil {
 			t.Errorf("missing asset %s: %v", name, err)
 		}

@@ -58,6 +58,8 @@ func webServer(t *testing.T) *Server {
 	mk(work, "e1", "Standup", "brandon", model.StatusConfirmed, 1, 9, false, "work")
 	mk(fam, "e2", "Soccer", "kim", model.StatusTentative, 1, 17, false, "kids")
 	mk(fam, "e3", "Trip", "brandon", model.StatusConfirmed, 3, 0, true)
+	// e4 overlaps e1 (both day+1 at 09:xx).
+	mk(fam, "e4", "Dentist", "kim", model.StatusConfirmed, 1, 9, false)
 
 	noWork, _ := views.Parse("not tag:work")
 	return New(Config{
@@ -148,6 +150,30 @@ func TestStaticAssets(t *testing.T) {
 	}
 	if js := do(t, s, http.MethodGet, "/static/htmx.min.js", nil); js.Code != http.StatusOK {
 		t.Errorf("htmx.min.js status = %d", js.Code)
+	}
+}
+
+func TestConflictMarkedInAgenda(t *testing.T) {
+	s := webServer(t)
+	body := do(t, s, http.MethodGet, "/", nil).Body.String()
+
+	// Standup and Dentist overlap (both day+1, 09:00-10:00).
+	if !strings.Contains(body, `class="event owner`) {
+		t.Fatal("no events rendered")
+	}
+	if !strings.Contains(body, " conflict\"") {
+		t.Errorf("overlapping events not marked with conflict class:\n%s", body)
+	}
+	if !strings.Contains(body, `class="warn">overlaps`) {
+		t.Errorf("no overlaps marker:\n%s", body)
+	}
+	if !strings.Contains(body, "overlapping</span>") {
+		t.Errorf("no per-day conflict count:\n%s", body)
+	}
+
+	// Soccer at 17:00 does not overlap anything.
+	if strings.Count(body, "conflict") < 2 {
+		t.Errorf("expected exactly the two overlapping events flagged")
 	}
 }
 

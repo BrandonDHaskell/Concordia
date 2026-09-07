@@ -49,6 +49,9 @@ type Config struct {
 	// DAVHandler is mounted at /dav/ when non-nil.
 	DAVHandler http.Handler
 	Log        *slog.Logger
+	// WatchInterval is how often the daemon polls for a data change to push
+	// over SSE. Defaults to 2s.
+	WatchInterval time.Duration
 	// Now overrides the clock, for tests.
 	Now func() time.Time
 }
@@ -60,6 +63,7 @@ type Server struct {
 	log  *slog.Logger
 	now  func() time.Time
 	tmpl *template.Template
+	hub  *hub
 	byID map[string]Feed
 }
 
@@ -74,6 +78,7 @@ func New(cfg Config) *Server {
 		log:  cfg.Log,
 		now:  now,
 		tmpl: template.Must(template.ParseFS(web.Templates, "templates/*.html")),
+		hub:  newHub(),
 		byID: make(map[string]Feed, len(cfg.Feeds)),
 	}
 	for _, f := range cfg.Feeds {
@@ -85,6 +90,7 @@ func New(cfg Config) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleIndex)
 	mux.HandleFunc("GET /view", s.handleViewFrag)
+	mux.HandleFunc("GET /events", s.handleEvents)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheControl(http.FileServerFS(staticFS))))
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	mux.HandleFunc("GET /feeds/{name}", s.handleFeed)
@@ -119,7 +125,10 @@ func cacheControl(h http.Handler) http.Handler {
 }
 
 // Run listens and serves until ctx is cancelled, then shuts down gracefully.
+// It also runs the change watcher that drives SSE.
 func (s *Server) Run(ctx context.Context) error {
+	go s.watch(ctx)
+
 	errc := make(chan error, 1)
 	go func() {
 		s.log.Info("http listening", "addr", s.srv.Addr)

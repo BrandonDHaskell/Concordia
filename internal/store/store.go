@@ -17,8 +17,12 @@ var ErrNotFound = errors.New("store: not found")
 
 // Store is a handle to the SQLite database.
 type Store struct {
-	db *sql.DB
+	db   *sql.DB
+	path string
 }
+
+// Path is the database file path this store was opened with.
+func (s *Store) Path() string { return s.path }
 
 // Open opens (creating if needed) the SQLite database at path in WAL mode with
 // foreign keys enforced and a busy timeout set. It does not run migrations;
@@ -44,12 +48,24 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		return nil, fmt.Errorf("store: ping %s: %w", path, err)
 	}
 
-	return &Store{db: db}, nil
+	return &Store{db: db, path: path}, nil
 }
 
 // Ping verifies the database is reachable.
 func (s *Store) Ping(ctx context.Context) error {
 	return s.db.PingContext(ctx)
+}
+
+// DataVersion returns SQLite's PRAGMA data_version. The value changes whenever
+// the database is written by a connection other than the pool this call lands
+// on, which makes it a cheap cross-process change signal (the daemon polls it
+// to detect a sync-once run and push an SSE update).
+func (s *Store) DataVersion(ctx context.Context) (int64, error) {
+	var v int64
+	if err := s.db.QueryRowContext(ctx, "PRAGMA data_version").Scan(&v); err != nil {
+		return 0, fmt.Errorf("store: reading data_version: %w", err)
+	}
+	return v, nil
 }
 
 // DB exposes the underlying handle for packages that run their own queries
