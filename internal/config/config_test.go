@@ -150,6 +150,30 @@ provider = "icloud"
 name     = "iCloud"`,
 		},
 		{
+			name: "colliding credential refs",
+			body: serverOK + `
+[[account]]
+person   = "a"
+provider = "google"
+name     = "Gmail"
+credential_ref = "shared"
+
+[[account]]
+person   = "b"
+provider = "google"
+name     = "Other"
+credential_ref = "shared"`,
+		},
+		{
+			name: "credential ref with path separator",
+			body: serverOK + `
+[[account]]
+person   = "a"
+provider = "google"
+name     = "Gmail"
+credential_ref = "../etc/passwd"`,
+		},
+		{
 			name: "rule with no match",
 			body: serverOK + `
 [[rule]]
@@ -207,6 +231,26 @@ name = "empty"`,
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := Load(writeConfig(t, tt.body)); err == nil {
 				t.Fatal("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestAccountRef(t *testing.T) {
+	tests := []struct {
+		name string
+		a    Account
+		want string
+	}{
+		{name: "explicit ref wins", a: Account{Name: "Work Gmail", CredentialRef: "work"}, want: "work"},
+		{name: "slug of name", a: Account{Name: "Work Gmail"}, want: "work-gmail"},
+		{name: "slug collapses punctuation", a: Account{Name: "brandon@example.com"}, want: "brandon-example-com"},
+		{name: "slug trims edges", a: Account{Name: "  iCloud!  "}, want: "icloud"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.a.Ref(); got != tt.want {
+				t.Errorf("Ref() = %q, want %q", got, tt.want)
 			}
 		})
 	}

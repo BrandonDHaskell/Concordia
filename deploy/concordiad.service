@@ -14,6 +14,12 @@ Group=concordia
 StateDirectory=concordia
 ConfigurationDirectory=concordia
 
+# OAuth client secret, encrypted at rest. Create with:
+#   systemd-creds encrypt client_secret.json /etc/concordia/google_oauth.cred
+# The runtime refresh token is written by the app to
+# $STATE_DIRECTORY/tokens/<credential_ref>.json (0600).
+LoadCredentialEncrypted=google_oauth:/etc/concordia/google_oauth.cred
+
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes

@@ -6,3 +6,5 @@ config.toml
 .env
 /tmp/
 /.idea/
+/tokens/
+*.cred
