@@ -158,6 +158,30 @@ func TestSyncStaleTokenTriggersFullResync(t *testing.T) {
 	}
 }
 
+func TestSyncCancelledInstanceIsAChange(t *testing.T) {
+	p := newFakeProvider(t, func(w http.ResponseWriter, r *http.Request) {
+		writeFixture(t, w, "events_delta_cancel_instance.json")
+	})
+
+	d, next, err := p.Sync(context.Background(), testCal, "SYNC3")
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if next != "SYNC4" {
+		t.Errorf("next = %q, want SYNC4", next)
+	}
+	if len(d.Deleted) != 0 {
+		t.Errorf("deleted = %v, want none (cancelled instance is not a deletion)", d.Deleted)
+	}
+	if len(d.Changed) != 1 || d.Changed[0].RemoteID != "rec1_20260921T170000Z" {
+		t.Fatalf("changed = %+v, want the cancelled instance", d.Changed)
+	}
+	body := string(d.Changed[0].Body)
+	if !strings.Contains(body, `"recurringEventId"`) || !strings.Contains(body, `"cancelled"`) {
+		t.Errorf("body lost the exception markers: %s", body)
+	}
+}
+
 func TestSyncRecurringOverridePassesThrough(t *testing.T) {
 	p := newFakeProvider(t, func(w http.ResponseWriter, r *http.Request) {
 		writeFixture(t, w, "events_recurring.json")

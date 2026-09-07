@@ -151,7 +151,11 @@ func (p *Provider) list(ctx context.Context, cal model.Calendar, token string) (
 	)
 	err := call.Pages(ctx, func(page *gcal.Events) error {
 		for _, item := range page.Items {
-			if item.Status == statusCancelled {
+			// A cancelled top-level event is a deletion. A cancelled instance
+			// of a recurring event carries recurringEventId and is a
+			// per-instance exception the expander must see, so it passes
+			// through as a change (a "this instance is gone" override).
+			if item.Status == statusCancelled && item.RecurringEventId == "" {
 				d.Deleted = append(d.Deleted, item.Id)
 				continue
 			}
