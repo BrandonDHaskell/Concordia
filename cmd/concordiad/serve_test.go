@@ -70,6 +70,15 @@ func TestBuildServerServesFeedsAndDAV(t *testing.T) {
 	ts := httptest.NewServer(srv.Handler())
 	defer ts.Close()
 
+	// Web view renders the agenda and a chip for the person.
+	page := get(t, ts, "/")
+	if !strings.Contains(page, "<!doctype html>") || !strings.Contains(page, "Standup") {
+		t.Errorf("web view:\n%s", page)
+	}
+	if !strings.Contains(page, `href="/?owner=brandon"`) {
+		t.Errorf("web view missing the brandon owner chip:\n%s", page)
+	}
+
 	// ICS feed, with the [serve] summary prefix applied.
 	body := get(t, ts, "/feeds/p-brandon.ics")
 	if !strings.Contains(body, "SUMMARY:[brandon] Standup") {

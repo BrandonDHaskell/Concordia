@@ -45,6 +45,7 @@ func buildServer(cfg *config.Config, st *store.Store, log *slog.Logger) (*httpd.
 		Store:         st,
 		Feeds:         feeds,
 		SummaryPrefix: cfg.Serve.SummaryPrefix,
+		DisplayTZ:     cfg.Serve.Location(),
 		WindowBack:    wb,
 		WindowFwd:     wf,
 		DAVHandler:    backend.Handler(),

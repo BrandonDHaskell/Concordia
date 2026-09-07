@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 
@@ -45,6 +46,22 @@ type Serve struct {
 	// SummaryPrefix prepends "[owner] " to every event summary in CalDAV
 	// collections and ICS feeds, for clients that show one merged calendar.
 	SummaryPrefix bool `toml:"summary_prefix"`
+	// Timezone is the IANA zone the web view renders timed events in (the
+	// household's wall-clock zone). Empty means the host's local zone.
+	Timezone string `toml:"timezone"`
+}
+
+// Location returns the display zone for the web view. It never errors after
+// config validation.
+func (s Serve) Location() *time.Location {
+	if s.Timezone == "" || s.Timezone == "Local" {
+		return time.Local
+	}
+	loc, err := time.LoadLocation(s.Timezone)
+	if err != nil {
+		return time.Local
+	}
+	return loc
 }
 
 // People returns the distinct persons across all accounts, in first-seen order.
@@ -165,6 +182,11 @@ func Load(path string) (*Config, error) {
 func (c *Config) validate() error {
 	if err := c.Server.validate(); err != nil {
 		return fmt.Errorf("[server]: %w", err)
+	}
+	if tz := c.Serve.Timezone; tz != "" && tz != "Local" {
+		if _, err := time.LoadLocation(tz); err != nil {
+			return fmt.Errorf("[serve]: timezone %q: %w", tz, err)
+		}
 	}
 	seenRef := make(map[string]bool, len(c.Accounts))
 	for i, a := range c.Accounts {

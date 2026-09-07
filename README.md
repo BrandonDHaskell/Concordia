@@ -54,6 +54,16 @@ predicate = "owner:brandon and tag:kids"
 
 Inspect the result: `concordiad occurrences [--owner X] [--tag Y] [--view Z] [--days N]`.
 
+## Web view
+
+Open `http://tranquility:8080/` for the planning screen: upcoming events grouped
+by day, one colour per person, with filter chips for each person, each
+configured view, and the tags in view. Chips toggle a query param and update
+the page in place (htmx, no page reload). Set `[serve] timezone` to the wall
+tablet's zone.
+
+Live updates over SSE are not wired yet; refresh to pick up a new sync.
+
 ## Connecting a client
 
 The daemon serves read-only CalDAV and ICS on `[server] listen`.
