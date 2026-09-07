@@ -13,7 +13,9 @@ import (
 
 	"github.com/bhaskell/Concordia/internal/expand"
 	"github.com/bhaskell/Concordia/internal/model"
+	"github.com/bhaskell/Concordia/internal/normalize"
 	"github.com/bhaskell/Concordia/internal/provider"
+	"github.com/bhaskell/Concordia/internal/rules"
 	"github.com/bhaskell/Concordia/internal/store"
 )
 
@@ -34,7 +36,10 @@ type Result struct {
 type Syncer struct {
 	Store  *store.Store
 	Window model.Window
-	Log    *slog.Logger
+	// Rules is the materialization rule engine. Nil means no rules (source
+	// labels still become tags).
+	Rules *rules.Engine
+	Log   *slog.Logger
 }
 
 // Calendar syncs one calendar. providerKind selects the normalizer path; owner
@@ -92,7 +97,7 @@ func (s *Syncer) Calendar(ctx context.Context, p provider.Provider, norm Normali
 			res.Deleted += extra
 		}
 
-		occCount, err := s.reexpand(ctx, tx, cal.ID, touched, owner)
+		occCount, err := s.reexpand(ctx, tx, cal, touched, owner)
 		if err != nil {
 			return err
 		}
@@ -138,8 +143,9 @@ func (s *Syncer) reconcile(ctx context.Context, tx *sql.Tx, calID int64, present
 	return deleted, nil
 }
 
-// reexpand rebuilds occurrences for every touched series.
-func (s *Syncer) reexpand(ctx context.Context, tx *sql.Tx, calID int64, touched map[string]struct{}, owner string) (int, error) {
+// reexpand rebuilds occurrences for every touched series, then runs the rules
+// pass (source-label tags, rule tags, exclusions, redactions) before writing.
+func (s *Syncer) reexpand(ctx context.Context, tx *sql.Tx, cal model.Calendar, touched map[string]struct{}, owner string) (int, error) {
 	if len(touched) == 0 {
 		return 0, nil
 	}
@@ -148,18 +154,27 @@ func (s *Syncer) reexpand(ctx context.Context, tx *sql.Tx, calID int64, touched 
 		uids = append(uids, uid)
 	}
 
-	events, err := s.Store.EventsByUIDs(ctx, tx, calID, uids)
+	events, err := s.Store.EventsByUIDs(ctx, tx, cal.ID, uids)
 	if err != nil {
 		return 0, err
+	}
+	sourceTags := make(map[int64][]string, len(events))
+	for _, ev := range events {
+		sourceTags[ev.ID] = ev.SourceTags
 	}
 
 	occs, err := expand.Expand(events, s.Window, owner)
 	if err != nil {
 		return 0, fmt.Errorf("expand: %w", err)
 	}
+
 	byEvent := make(map[int64][]model.Occurrence, len(events))
 	for _, o := range occs {
-		byEvent[o.EventID] = append(byEvent[o.EventID], o)
+		tagged, keep := s.applyRules(cal.DisplayName, sourceTags[o.EventID], o)
+		if !keep {
+			continue
+		}
+		byEvent[tagged.EventID] = append(byEvent[tagged.EventID], tagged)
 	}
 
 	total := 0
@@ -171,6 +186,42 @@ func (s *Syncer) reexpand(ctx context.Context, tx *sql.Tx, calID int64, touched 
 		total += len(set)
 	}
 	return total, nil
+}
+
+// applyRules merges source-label tags with rule tags, applies a rule redaction,
+// and reports whether a rule excluded the occurrence.
+func (s *Syncer) applyRules(calendarName string, sourceTags []string, o model.Occurrence) (model.Occurrence, bool) {
+	var res rules.Result
+	if s.Rules != nil {
+		res = s.Rules.Evaluate(rules.Subject{
+			CalendarName: calendarName,
+			Summary:      o.Summary,
+			Location:     o.Location,
+		})
+	}
+	if res.Exclude {
+		return model.Occurrence{}, false
+	}
+	if res.Redact {
+		o.Summary = normalize.RedactedSummary
+		o.Location = ""
+	}
+
+	tags := append([]string(nil), sourceTags...)
+	for _, t := range res.Tags {
+		tags = appendUnique(tags, t)
+	}
+	o.Tags = tags
+	return o, true
+}
+
+func appendUnique(ss []string, s string) []string {
+	for _, existing := range ss {
+		if existing == s {
+			return ss
+		}
+	}
+	return append(ss, s)
 }
 
 func (s *Syncer) log() *slog.Logger {

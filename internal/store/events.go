@@ -18,13 +18,13 @@ import (
 func (s *Store) UpsertEvent(ctx context.Context, tx *sql.Tx, ev model.Event) (int64, error) {
 	dtstart, dtend := encodeEventBounds(ev)
 
-	exdates := ""
-	if len(ev.EXDates) > 0 {
-		b, err := json.Marshal(ev.EXDates)
-		if err != nil {
-			return 0, fmt.Errorf("store: encoding exdates for %s: %w", ev.UID, err)
-		}
-		exdates = string(b)
+	exdates, err := encodeStrings(ev.EXDates)
+	if err != nil {
+		return 0, fmt.Errorf("store: encoding exdates for %s: %w", ev.UID, err)
+	}
+	sourceTags, err := encodeStrings(ev.SourceTags)
+	if err != nil {
+		return 0, fmt.Errorf("store: encoding source tags for %s: %w", ev.UID, err)
 	}
 
 	updatedAt := ev.UpdatedAt
@@ -37,30 +37,31 @@ func (s *Store) UpsertEvent(ctx context.Context, tx *sql.Tx, ev model.Event) (in
 	}
 
 	var id int64
-	err := tx.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO events (
 			calendar_id, remote_id, uid, recurrence_id, summary, location,
-			dtstart, dtend, is_all_day, tzid, rrule, exdates, status, etag, raw,
-			updated_at, deleted_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			dtstart, dtend, is_all_day, tzid, rrule, exdates, source_tags,
+			status, etag, raw, updated_at, deleted_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (calendar_id, uid, recurrence_id) DO UPDATE SET
-			remote_id  = excluded.remote_id,
-			summary    = excluded.summary,
-			location   = excluded.location,
-			dtstart    = excluded.dtstart,
-			dtend      = excluded.dtend,
-			is_all_day = excluded.is_all_day,
-			tzid       = excluded.tzid,
-			rrule      = excluded.rrule,
-			exdates    = excluded.exdates,
-			status     = excluded.status,
-			etag       = excluded.etag,
-			raw        = excluded.raw,
-			updated_at = excluded.updated_at,
-			deleted_at = excluded.deleted_at
+			remote_id   = excluded.remote_id,
+			summary     = excluded.summary,
+			location    = excluded.location,
+			dtstart     = excluded.dtstart,
+			dtend       = excluded.dtend,
+			is_all_day  = excluded.is_all_day,
+			tzid        = excluded.tzid,
+			rrule       = excluded.rrule,
+			exdates     = excluded.exdates,
+			source_tags = excluded.source_tags,
+			status      = excluded.status,
+			etag        = excluded.etag,
+			raw         = excluded.raw,
+			updated_at  = excluded.updated_at,
+			deleted_at  = excluded.deleted_at
 		RETURNING id`,
 		ev.CalendarID, ev.RemoteID, ev.UID, ev.RecurrenceID, ev.Summary, ev.Location,
-		dtstart, dtend, boolToInt(ev.AllDay), ev.TZID, ev.RRULE, exdates,
+		dtstart, dtend, boolToInt(ev.AllDay), ev.TZID, ev.RRULE, exdates, sourceTags,
 		ev.Status, ev.ETag, ev.Raw, updatedAt.UTC().Format(timeLayout), deletedAt,
 	).Scan(&id)
 	if err != nil {
@@ -141,8 +142,9 @@ func (s *Store) EventsByUIDs(ctx context.Context, tx *sql.Tx, calendarID int64, 
 	rows, err := tx.QueryContext(ctx, `
 		SELECT id, calendar_id, remote_id, uid, recurrence_id, summary, location,
 		       dtstart, COALESCE(dtend, ''), is_all_day, COALESCE(tzid, ''),
-		       COALESCE(rrule, ''), COALESCE(exdates, ''), COALESCE(status, ''),
-		       COALESCE(etag, ''), raw, updated_at, COALESCE(deleted_at, '')
+		       COALESCE(rrule, ''), COALESCE(exdates, ''), COALESCE(source_tags, ''),
+		       COALESCE(status, ''), COALESCE(etag, ''), raw, updated_at,
+		       COALESCE(deleted_at, '')
 		FROM events
 		WHERE calendar_id = ? AND uid IN (`+placeholders+`)`, args...)
 	if err != nil {
@@ -167,13 +169,15 @@ func scanEvent(rows *sql.Rows) (model.Event, error) {
 		dtstart, dtend       string
 		isAllDay             int
 		tzid, exdates        string
+		sourceTags           string
 		updatedAt, deletedAt string
 		raw                  []byte
 	)
 	if err := rows.Scan(
 		&ev.ID, &ev.CalendarID, &ev.RemoteID, &ev.UID, &ev.RecurrenceID,
 		&ev.Summary, &ev.Location, &dtstart, &dtend, &isAllDay, &tzid,
-		&ev.RRULE, &exdates, &ev.Status, &ev.ETag, &raw, &updatedAt, &deletedAt,
+		&ev.RRULE, &exdates, &sourceTags, &ev.Status, &ev.ETag, &raw,
+		&updatedAt, &deletedAt,
 	); err != nil {
 		return model.Event{}, fmt.Errorf("store: scanning event: %w", err)
 	}
@@ -182,10 +186,11 @@ func scanEvent(rows *sql.Rows) (model.Event, error) {
 	ev.TZID = tzid
 	ev.Raw = raw
 
-	if exdates != "" {
-		if err := json.Unmarshal([]byte(exdates), &ev.EXDates); err != nil {
-			return model.Event{}, fmt.Errorf("store: decoding exdates for %s: %w", ev.UID, err)
-		}
+	if err := decodeStrings(exdates, &ev.EXDates); err != nil {
+		return model.Event{}, fmt.Errorf("store: decoding exdates for %s: %w", ev.UID, err)
+	}
+	if err := decodeStrings(sourceTags, &ev.SourceTags); err != nil {
+		return model.Event{}, fmt.Errorf("store: decoding source tags for %s: %w", ev.UID, err)
 	}
 
 	start, err := decodeEventTime(dtstart, tzid, ev.AllDay)
@@ -229,6 +234,23 @@ func encodeEventBounds(ev model.Event) (dtstart string, dtend any) {
 		dtend = ev.End.Format(time.RFC3339)
 	}
 	return dtstart, dtend
+}
+
+// encodeStrings renders a string slice as a JSON array, or "" when empty.
+func encodeStrings(ss []string) (string, error) {
+	if len(ss) == 0 {
+		return "", nil
+	}
+	b, err := json.Marshal(ss)
+	return string(b), err
+}
+
+// decodeStrings parses a JSON array written by encodeStrings; "" yields nil.
+func decodeStrings(s string, dst *[]string) error {
+	if s == "" {
+		return nil
+	}
+	return json.Unmarshal([]byte(s), dst)
 }
 
 func decodeEventTime(s, tzid string, allDay bool) (time.Time, error) {
