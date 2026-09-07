@@ -52,6 +52,18 @@ func (s *Store) Ping(ctx context.Context) error {
 	return s.db.PingContext(ctx)
 }
 
+// DataVersion returns SQLite's PRAGMA data_version. The value changes whenever
+// the database is written by a connection other than the pool this call lands
+// on, which makes it a cheap cross-process change signal (the daemon polls it
+// to detect a sync-once run and push an SSE update).
+func (s *Store) DataVersion(ctx context.Context) (int64, error) {
+	var v int64
+	if err := s.db.QueryRowContext(ctx, "PRAGMA data_version").Scan(&v); err != nil {
+		return 0, fmt.Errorf("store: reading data_version: %w", err)
+	}
+	return v, nil
+}
+
 // DB exposes the underlying handle for packages that run their own queries
 // within the store layer's own tests. It is not for use outside internal/store.
 func (s *Store) DB() *sql.DB {
