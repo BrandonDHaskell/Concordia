@@ -31,6 +31,7 @@ const (
 type Config struct {
 	Server   Server    `toml:"server"`
 	Google   Google    `toml:"google"`
+	Graph    Graph     `toml:"graph"`
 	Accounts []Account `toml:"account"`
 	Rules    []Rule    `toml:"rule"`
 	Views    []View    `toml:"view"`
@@ -42,6 +43,16 @@ type Google struct {
 	// secret. In production the secret comes from the systemd credential
 	// "google_oauth" instead.
 	CredentialFile string `toml:"credential_file"`
+}
+
+// Graph holds settings shared by all Microsoft Graph accounts. The client id
+// and tenant are not secrets (a Graph app is a public client), so they live in
+// config; there is no client secret.
+type Graph struct {
+	ClientID string `toml:"client_id"`
+	// Tenant is "common", "organizations", "consumers", or a directory
+	// (tenant) ID. Empty is treated as "common".
+	Tenant string `toml:"tenant"`
 }
 
 // Server holds process-wide settings.
@@ -141,6 +152,10 @@ func (c *Config) validate() error {
 			return fmt.Errorf("[[account]] %d (%q): credential ref %q collides with another account", i, a.Name, a.Ref())
 		}
 		seenRef[a.Ref()] = true
+
+		if a.Provider == ProviderGraph && c.Graph.ClientID == "" {
+			return fmt.Errorf("[[account]] %d (%q): provider %q requires [graph] client_id", i, a.Name, a.Provider)
+		}
 	}
 	for i, r := range c.Rules {
 		if err := r.validate(); err != nil {

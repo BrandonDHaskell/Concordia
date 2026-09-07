@@ -165,6 +165,14 @@ name     = "Other"
 credential_ref = "shared"`,
 		},
 		{
+			name: "graph account without client_id",
+			body: serverOK + `
+[[account]]
+person   = "a"
+provider = "graph"
+name     = "Work"`,
+		},
+		{
 			name: "credential ref with path separator",
 			body: serverOK + `
 [[account]]
@@ -233,6 +241,29 @@ name = "empty"`,
 				t.Fatal("expected error, got nil")
 			}
 		})
+	}
+}
+
+func TestLoadGraphAccount(t *testing.T) {
+	body := serverOK + `
+[graph]
+client_id = "app-guid"
+tenant    = "organizations"
+
+[[account]]
+person   = "brandon"
+provider = "graph"
+name     = "Work Outlook"`
+
+	cfg, err := Load(writeConfig(t, body))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Graph.ClientID != "app-guid" || cfg.Graph.Tenant != "organizations" {
+		t.Errorf("graph settings = %+v", cfg.Graph)
+	}
+	if cfg.Accounts[0].Ref() != "work-outlook" {
+		t.Errorf("ref = %q", cfg.Accounts[0].Ref())
 	}
 }
 
