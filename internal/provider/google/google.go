@@ -36,6 +36,7 @@ type Provider struct {
 	callTimeout time.Duration
 	log         *slog.Logger
 	now         func() time.Time
+	endpoint    string
 }
 
 // Option configures a Provider.
@@ -47,25 +48,43 @@ func WithLogger(l *slog.Logger) Option { return func(p *Provider) { p.log = l } 
 // WithClock overrides the time source, for tests.
 func WithClock(now func() time.Time) Option { return func(p *Provider) { p.now = now } }
 
+// WithEndpoint overrides the Google API base URL. Used by tests and by an
+// on-LAN inspection proxy; empty means the real API.
+func WithEndpoint(url string) Option { return func(p *Provider) { p.endpoint = url } }
+
 // New builds a provider on an already-authenticated HTTP client. windowBack and
 // windowFwd bound a full sync around now.
 func New(ctx context.Context, client *http.Client, windowBack, windowFwd time.Duration, opts ...Option) (*Provider, error) {
-	svc, err := gcal.NewService(ctx, option.WithHTTPClient(client))
+	p := defaults(windowBack, windowFwd)
+	for _, o := range opts {
+		o(p)
+	}
+
+	clientOpts := []option.ClientOption{option.WithHTTPClient(client)}
+	if p.endpoint != "" {
+		clientOpts = append(clientOpts, option.WithEndpoint(p.endpoint))
+	}
+	svc, err := gcal.NewService(ctx, clientOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("google: building calendar service: %w", err)
 	}
-	return newProvider(svc, windowBack, windowFwd, opts...), nil
+	p.svc = svc
+	return p, nil
 }
 
-func newProvider(svc *gcal.Service, windowBack, windowFwd time.Duration, opts ...Option) *Provider {
-	p := &Provider{
-		svc:         svc,
+func defaults(windowBack, windowFwd time.Duration) *Provider {
+	return &Provider{
 		windowBack:  windowBack,
 		windowFwd:   windowFwd,
 		callTimeout: defaultCallTimeout,
 		log:         slog.Default(),
 		now:         time.Now,
 	}
+}
+
+func newProvider(svc *gcal.Service, windowBack, windowFwd time.Duration, opts ...Option) *Provider {
+	p := defaults(windowBack, windowFwd)
+	p.svc = svc
 	for _, o := range opts {
 		o(p)
 	}
