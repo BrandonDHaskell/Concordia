@@ -51,7 +51,7 @@ func runAuth(ctx context.Context, args []string, log *slog.Logger) error {
 		return err
 	}
 
-	tokStore, err := auth.NewFileTokenStore(tokenDir(cfg))
+	tokStore, err := authFileTokenStore(cfg)
 	if err != nil {
 		return err
 	}

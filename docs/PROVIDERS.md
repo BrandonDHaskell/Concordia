@@ -63,6 +63,18 @@ directory.
 The refresh token is rewritten in place whenever it rotates. Keep the `tokens/`
 directory out of any backup set.
 
+### 4. Run a sync
+
+```
+concordiad sync-once --account Gmail            # all of the account's calendars
+concordiad sync-once --account Gmail --calendar brandon@example.com
+```
+
+`sync-once` pulls the delta, normalizes and stores events, and rebuilds
+occurrences for the rolling window, all in one transaction per calendar. It
+advances the stored sync token, so the next run only sees changes. The daemon
+will do this on a schedule in a later milestone.
+
 ### Notes and traps
 
 - `events.list` with `syncToken`. A 410 means the token is dead: Concordia

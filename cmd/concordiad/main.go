@@ -2,8 +2,9 @@
 //
 // Usage:
 //
-//	concordiad [-config path] [-migrate]      run the daemon (or migrate and exit)
-//	concordiad auth google --account <name>   authorize a Google account
+//	concordiad [-config path] [-migrate]        run the daemon (or migrate and exit)
+//	concordiad auth google --account <name>     authorize a Google account
+//	concordiad sync-once --account <name>       run one sync pass for an account
 package main
 
 import (
@@ -23,12 +24,15 @@ func main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	args := os.Args[1:]
 
-	if len(args) > 0 && args[0] == "auth" {
-		if err := runAuth(context.Background(), args[1:], log); err != nil {
-			log.Error("auth failed", "err", err)
-			os.Exit(1)
+	if len(args) > 0 {
+		switch args[0] {
+		case "auth":
+			exitOn(log, "auth failed", runAuth(context.Background(), args[1:], log))
+			return
+		case "sync-once":
+			exitOn(log, "sync-once failed", runSyncOnce(context.Background(), args[1:], log))
+			return
 		}
-		return
 	}
 
 	fs := flag.NewFlagSet("concordiad", flag.ExitOnError)
@@ -38,6 +42,14 @@ func main() {
 
 	if err := runDaemon(*configPath, *migrateOnly, log); err != nil {
 		log.Error("fatal", "err", err)
+		os.Exit(1)
+	}
+}
+
+// exitOn logs and exits non-zero when err is non-nil.
+func exitOn(log *slog.Logger, msg string, err error) {
+	if err != nil {
+		log.Error(msg, "err", err)
 		os.Exit(1)
 	}
 }
