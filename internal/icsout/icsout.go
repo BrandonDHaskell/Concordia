@@ -12,12 +12,20 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/emersion/go-ical"
 
 	"github.com/bhaskell/Concordia/internal/model"
 )
+
+// OccurrenceUID is the stable identity of one materialized occurrence: its
+// event's UID plus the instance start. It is used both as the VEVENT UID and,
+// with a ".ics" suffix, as the CalDAV resource name.
+func OccurrenceUID(eventUID string, start time.Time) string {
+	return eventUID + "-" + strconv.FormatInt(start.UTC().Unix(), 10)
+}
 
 const (
 	prodID          = "-//Concordia//household calendar aggregator//EN"

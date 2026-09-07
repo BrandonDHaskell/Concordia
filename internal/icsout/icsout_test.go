@@ -113,6 +113,19 @@ func TestNoPrefixByDefault(t *testing.T) {
 	}
 }
 
+func TestOccurrenceUID(t *testing.T) {
+	start := time.Date(2026, 9, 10, 16, 0, 0, 0, time.UTC)
+	got := OccurrenceUID("abc@google.com", start)
+	if got != "abc@google.com-1789056000" {
+		t.Errorf("OccurrenceUID = %q", got)
+	}
+	// Same instant in another zone yields the same UID.
+	la, _ := time.LoadLocation("America/Los_Angeles")
+	if OccurrenceUID("abc@google.com", start.In(la)) != got {
+		t.Error("UID depends on the rendering zone")
+	}
+}
+
 func TestReparseable(t *testing.T) {
 	// go-ical must be able to read back what we write.
 	out := render(t, sampleOccurrences(), Options{})

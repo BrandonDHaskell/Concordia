@@ -144,6 +144,22 @@ func TestOccurrencesFilters(t *testing.T) {
 	}
 }
 
+func TestOccurrenceRowIdentityFields(t *testing.T) {
+	s, ctx := seedOccurrences(t)
+	rows, err := s.Occurrences(ctx, OccurrenceQuery{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rows {
+		if r.EventUID == "" {
+			t.Errorf("%q has no EventUID", r.Summary)
+		}
+		if r.Status == "" {
+			t.Errorf("%q has no Status", r.Summary)
+		}
+	}
+}
+
 func TestOccurrencesOpenBounds(t *testing.T) {
 	s, ctx := seedOccurrences(t)
 	all, err := s.Occurrences(ctx, OccurrenceQuery{})
