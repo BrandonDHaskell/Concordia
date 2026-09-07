@@ -62,7 +62,8 @@ configured view, and the tags in view. Chips toggle a query param and update
 the page in place (htmx, no page reload). Set `[serve] timezone` to the wall
 tablet's zone.
 
-Live updates over SSE are not wired yet; refresh to pick up a new sync.
+The page updates itself over SSE within a couple of seconds of a sync, keeping
+the active filters. Overlapping events are flagged, with a per-day count.
 
 ## Connecting a client
 
