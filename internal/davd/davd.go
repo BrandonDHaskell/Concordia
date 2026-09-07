@@ -84,12 +84,12 @@ func New(st *store.Store, o Options) *Backend {
 	}
 	for _, p := range o.People {
 		b.collections = append(b.collections, collection{
-			slug: "p-" + slug(p), name: p + " (all)", owner: p,
+			slug: "p-" + Slug(p), name: p + " (all)", owner: p,
 		})
 	}
 	for _, v := range o.Views {
 		b.collections = append(b.collections, collection{
-			slug: "v-" + slug(v.Name), name: "view: " + v.Name, predicate: v.Predicate,
+			slug: "v-" + Slug(v.Name), name: "view: " + v.Name, predicate: v.Predicate,
 		})
 	}
 	for i := range b.collections {
@@ -272,7 +272,9 @@ func (b *Backend) DeleteCalendarObject(context.Context, string) error {
 }
 
 // slug reduces s to lowercase ASCII alphanumerics and single hyphens.
-func slug(s string) string {
+// Slug reduces s to lowercase ASCII alphanumerics and single hyphens for use
+// as a URL path segment.
+func Slug(s string) string {
 	var b strings.Builder
 	hyphen := false
 	for _, r := range strings.ToLower(s) {

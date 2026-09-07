@@ -126,6 +126,21 @@ func TestOccurrenceUID(t *testing.T) {
 	}
 }
 
+func TestEmptyCalendarIsWellFormed(t *testing.T) {
+	out := render(t, nil, Options{Name: "Empty"})
+	if !strings.HasPrefix(out, "BEGIN:VCALENDAR\r\n") || !strings.HasSuffix(out, "END:VCALENDAR\r\n") {
+		t.Fatalf("empty calendar malformed:\n%q", out)
+	}
+	for _, want := range []string{"VERSION:2.0", "PRODID:", "X-WR-CALNAME:Empty"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("empty calendar missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "VEVENT") {
+		t.Errorf("empty calendar has a VEVENT:\n%s", out)
+	}
+}
+
 func TestReparseable(t *testing.T) {
 	// go-ical must be able to read back what we write.
 	out := render(t, sampleOccurrences(), Options{})

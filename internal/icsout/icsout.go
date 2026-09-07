@@ -13,6 +13,7 @@ import (
 	"io"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/emersion/go-ical"
@@ -154,9 +155,23 @@ func event(o Occurrence, opts Options, now time.Time) *ical.Event {
 	return ev
 }
 
-// Encode writes cal to w in iCalendar format with CRLF line endings.
+// Encode writes cal to w in iCalendar format with CRLF line endings. An empty
+// calendar is a valid state (a view that currently matches nothing); go-ical
+// refuses to encode one, so it is written by hand.
 func Encode(w io.Writer, cal *ical.Calendar) error {
-	return ical.NewEncoder(w).Encode(cal)
+	if len(cal.Children) > 0 {
+		return ical.NewEncoder(w).Encode(cal)
+	}
+	var b strings.Builder
+	b.WriteString("BEGIN:VCALENDAR\r\n")
+	for _, name := range []string{ical.PropVersion, ical.PropProductID, ical.PropCalendarScale, "X-WR-CALNAME"} {
+		if p := cal.Props.Get(name); p != nil && p.Value != "" {
+			fmt.Fprintf(&b, "%s:%s\r\n", name, p.Value)
+		}
+	}
+	b.WriteString("END:VCALENDAR\r\n")
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 // Write is Calendar followed by Encode.

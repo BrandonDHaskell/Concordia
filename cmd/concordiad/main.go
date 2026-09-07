@@ -17,7 +17,6 @@ import (
 	"syscall"
 
 	"github.com/bhaskell/Concordia/internal/config"
-	"github.com/bhaskell/Concordia/internal/httpd"
 	"github.com/bhaskell/Concordia/internal/store"
 )
 
@@ -83,7 +82,10 @@ func runDaemon(configPath string, migrateOnly bool, log *slog.Logger) error {
 		return nil
 	}
 
-	srv := httpd.New(cfg.Server.Listen, log, st)
+	srv, err := buildServer(cfg, st, log)
+	if err != nil {
+		return err
+	}
 	if err := srv.Run(ctx); err != nil {
 		return err
 	}
