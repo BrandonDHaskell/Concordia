@@ -12,6 +12,9 @@ window_fwd  = "400d"
 # Prefix every event summary with "[owner] " in CalDAV collections and ICS
 # feeds. Helpful for clients that show one merged calendar, noisy otherwise.
 summary_prefix = false
+# IANA zone the web view renders times in (the wall tablet's local zone).
+# Empty uses the host's zone.
+timezone = "America/Los_Angeles"
 
 [[account]]
 person   = "brandon"
