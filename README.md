@@ -63,7 +63,8 @@ the page in place (htmx, no page reload). Set `[serve] timezone` to the wall
 tablet's zone.
 
 The page updates itself over SSE within a couple of seconds of a sync, keeping
-the active filters. Overlapping events are flagged, with a per-day count.
+the active filters. Overlapping events are flagged, with a per-day count. The
+`columns` toggle switches to a per-person column grid for each day.
 
 ## Connecting a client
 

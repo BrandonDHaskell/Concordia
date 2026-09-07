@@ -19,7 +19,12 @@
 
 {{define "view" -}}
 <header>
-  <h1><a href="/" hx-get="/view" hx-push-url="/">Concordia</a></h1>
+  <h1>
+    <a href="/" hx-get="/view" hx-push-url="/">Concordia</a>
+    <a class="layout-toggle" href="/{{.LayoutQuery}}" hx-get="/view{{.LayoutQuery}}" hx-push-url="/{{.LayoutQuery}}">
+      {{- if .Columns}}list{{else}}columns{{end -}}
+    </a>
+  </h1>
   <div class="chips">
     <div class="chip-group"><span class="chip-label">Who</span>
       {{- range .Chips.Owners}}{{template "chip" .}}{{end -}}
@@ -36,7 +41,7 @@
     {{- end}}
   </div>
 </header>
-<main>{{template "agenda" .Agenda}}</main>
+<main>{{if .Columns}}{{template "columns" .Days}}{{else}}{{template "agenda" .Agenda}}{{end}}</main>
 {{- end}}
 
 {{define "chip" -}}
@@ -66,6 +71,36 @@
     </div>
   </div>
   {{- end}}
+</section>
+{{end}}
+{{- else -}}
+<p class="empty">Nothing scheduled in this window.</p>
+{{- end -}}
+{{- end}}
+
+{{define "columns" -}}
+{{- if . -}}
+{{range .}}
+<section class="day{{if .Today}} today{{end}}">
+  <h2>{{.Label}}{{if .Conflicts}} <span class="day-warn">{{.Conflicts}} overlapping</span>{{end}}</h2>
+  <div class="columns">
+    {{- range .People}}
+    <div class="col {{.OwnerClass}}">
+      <div class="col-head"><span class="dot"></span>{{.Name}}</div>
+      {{- if .Events}}
+      {{- range .Events}}
+      <div class="col-event{{if .Tentative}} tentative{{end}}{{if .Conflict}} conflict{{end}}">
+        <span class="time">{{.Time}}</span>
+        <span class="summary">{{.Summary}}</span>
+        {{- if .Conflict}}<span class="warn"></span>{{end -}}
+      </div>
+      {{- end}}
+      {{- else}}
+      <div class="col-empty">&mdash;</div>
+      {{- end}}
+    </div>
+    {{- end}}
+  </div>
 </section>
 {{end}}
 {{- else -}}
