@@ -14,10 +14,11 @@ import (
 
 // filter is the web view's query state.
 type filter struct {
-	Owner string
-	Tag   string
-	View  string
-	Days  int
+	Owner  string
+	Tag    string
+	View   string
+	Layout string // "" (agenda list) or "columns"
+	Days   int
 }
 
 const defaultDays = 14
@@ -28,6 +29,9 @@ func parseFilter(q url.Values) filter {
 		Tag:   q.Get("tag"),
 		View:  q.Get("view"),
 		Days:  defaultDays,
+	}
+	if q.Get("layout") == "columns" {
+		f.Layout = "columns"
 	}
 	if d := q.Get("days"); d != "" {
 		if n, err := parsePositiveInt(d); err == nil && n <= 400 {
@@ -48,6 +52,9 @@ func (f filter) query() string {
 	}
 	if f.View != "" {
 		v.Set("view", f.View)
+	}
+	if f.Layout != "" {
+		v.Set("layout", f.Layout)
 	}
 	if f.Days != defaultDays {
 		v.Set("days", fmt.Sprint(f.Days))
@@ -75,6 +82,8 @@ func (f filter) toggled(param, value string) filter {
 		set(&f.Tag)
 	case "view":
 		set(&f.View)
+	case "layout":
+		set(&f.Layout)
 	}
 	return f
 }
@@ -82,9 +91,25 @@ func (f filter) toggled(param, value string) filter {
 // --- template data ---
 
 type pageData struct {
-	Title  string
-	Chips  chipSet
-	Agenda agendaData
+	Title       string
+	Columns     bool
+	LayoutQuery string // query string for the layout toggle
+	Chips       chipSet
+	Agenda      agendaData
+	Days        []dayColumns
+}
+
+type dayColumns struct {
+	Label     string
+	Today     bool
+	Conflicts int
+	People    []personColumn
+}
+
+type personColumn struct {
+	Name       string
+	OwnerClass string
+	Events     []eventRow
 }
 
 type chipSet struct {
@@ -163,10 +188,17 @@ func (s *Server) renderWeb(w http.ResponseWriter, r *http.Request, tmpl string) 
 		shown = append(shown, row)
 	}
 
+	conflicts := markConflicts(shown)
 	data := pageData{
-		Title:  "Concordia",
-		Chips:  s.buildChips(f, tagSet),
-		Agenda: agendaData{Days: groupByDay(shown, markConflicts(shown), loc, now)},
+		Title:       "Concordia",
+		Columns:     f.Layout == "columns",
+		LayoutQuery: f.toggled("layout", "columns").query(),
+		Chips:       s.buildChips(f, tagSet),
+	}
+	if data.Columns {
+		data.Days = groupByDayColumns(shown, conflicts, s.people(), loc, now)
+	} else {
+		data.Agenda = agendaData{Days: groupByDay(shown, conflicts, loc, now)}
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -216,6 +248,71 @@ func (s *Server) webViewPredicate(name string) views.Predicate {
 		}
 	}
 	return nil
+}
+
+// people returns the household members, in config order, from the person feeds.
+func (s *Server) people() []string {
+	var out []string
+	for _, feed := range s.cfg.Feeds {
+		if feed.Owner != "" {
+			out = append(out, feed.Owner)
+		}
+	}
+	return out
+}
+
+// groupByDayColumns lays each day out as one column per person. rows must be
+// start-sorted; conflict is keyed by index into rows.
+func groupByDayColumns(rows []store.OccurrenceRow, conflict map[int]bool, people []string, loc *time.Location, now time.Time) []dayColumns {
+	today := dateKey(now)
+	tomorrow := dateKey(now.AddDate(0, 0, 1))
+
+	colIndex := make(map[string]int, len(people))
+	for i, p := range people {
+		colIndex[p] = i
+	}
+
+	var days []dayColumns
+	var cur *dayColumns
+	var curKey string
+	for i, row := range rows {
+		local := row.Start.In(loc)
+		key := dateKey(local)
+		if cur == nil || key != curKey {
+			label := local.Format("Mon Jan 2")
+			switch key {
+			case today:
+				label = "Today"
+			case tomorrow:
+				label = "Tomorrow"
+			}
+			cols := make([]personColumn, len(people))
+			for j, p := range people {
+				cols[j] = personColumn{Name: p, OwnerClass: ownerClass(p)}
+			}
+			days = append(days, dayColumns{Label: label, Today: key == today, People: cols})
+			cur = &days[len(days)-1]
+			curKey = key
+		}
+
+		ci, ok := colIndex[row.Owner]
+		if !ok {
+			continue // an owner with no configured person column
+		}
+		cur.People[ci].Events = append(cur.People[ci].Events, eventRow{
+			Time:      eventTime(row, loc),
+			Summary:   row.Summary,
+			Owner:     row.Owner,
+			Calendar:  row.CalendarName,
+			Tags:      row.Tags,
+			Tentative: row.Status == "tentative",
+			Conflict:  conflict[i],
+		})
+		if conflict[i] {
+			cur.Conflicts++
+		}
+	}
+	return days
 }
 
 func groupByDay(rows []store.OccurrenceRow, conflict map[int]bool, loc *time.Location, now time.Time) []dayGroup {
