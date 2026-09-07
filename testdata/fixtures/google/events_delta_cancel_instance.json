@@ -1,0 +1,17 @@
+{
+  "kind": "calendar#events",
+  "etag": "\"cietag\"",
+  "summary": "brandon@example.com",
+  "timeZone": "America/Los_Angeles",
+  "nextSyncToken": "SYNC4",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "etag": "\"rec1-inst-cancelled\"",
+      "id": "rec1_20260921T170000Z",
+      "status": "cancelled",
+      "recurringEventId": "rec1",
+      "originalStartTime": { "dateTime": "2026-09-21T10:00:00-07:00", "timeZone": "America/Los_Angeles" }
+    }
+  ]
+}

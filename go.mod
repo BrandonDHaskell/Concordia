@@ -4,6 +4,7 @@ go 1.27
 
 require (
 	github.com/BurntSushi/toml v1.6.0
+	github.com/teambition/rrule-go v1.8.2
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.297.0
 	modernc.org/sqlite v1.58.0

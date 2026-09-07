@@ -10,6 +10,16 @@ import (
 	"github.com/bhaskell/Concordia/internal/model"
 )
 
+func setSyncToken(t *testing.T, ctx context.Context, s *Store, calID int64, token string, at time.Time) {
+	t.Helper()
+	err := s.WithTx(ctx, func(tx *sql.Tx) error {
+		return s.SetSyncToken(ctx, tx, calID, token, at)
+	})
+	if err != nil {
+		t.Fatalf("SetSyncToken: %v", err)
+	}
+}
+
 func migratedStore(t *testing.T) (*Store, context.Context) {
 	t.Helper()
 	s := openTemp(t)
@@ -81,9 +91,7 @@ func TestUpsertCalendarPreservesSyncState(t *testing.T) {
 	}
 
 	syncedAt := time.Now().UTC().Truncate(time.Second)
-	if err := s.SetSyncToken(ctx, cal.ID, "tok-123", syncedAt); err != nil {
-		t.Fatalf("SetSyncToken: %v", err)
-	}
+	setSyncToken(t, ctx, s, cal.ID, "tok-123", syncedAt)
 
 	// A later discovery pass re-upserts the calendar with a new name.
 	if _, err := s.UpsertCalendar(ctx, model.Calendar{
@@ -121,9 +129,7 @@ func TestSetCalendarErrorKeepsToken(t *testing.T) {
 	cal, _ := s.UpsertCalendar(ctx, model.Calendar{
 		AccountID: acct.ID, RemoteID: "primary", DisplayName: "P", Enabled: true,
 	})
-	if err := s.SetSyncToken(ctx, cal.ID, "tok-abc", time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	setSyncToken(t, ctx, s, cal.ID, "tok-abc", time.Now())
 
 	if err := s.SetCalendarError(ctx, cal.ID, "410 gone"); err != nil {
 		t.Fatalf("SetCalendarError: %v", err)
@@ -138,9 +144,7 @@ func TestSetCalendarErrorKeepsToken(t *testing.T) {
 	}
 
 	// A subsequent success clears the error.
-	if err := s.SetSyncToken(ctx, cal.ID, "tok-def", time.Now()); err != nil {
-		t.Fatal(err)
-	}
+	setSyncToken(t, ctx, s, cal.ID, "tok-def", time.Now())
 	cals, _ = s.Calendars(ctx, acct.ID)
 	if cals[0].LastError != "" {
 		t.Errorf("LastError not cleared: %q", cals[0].LastError)

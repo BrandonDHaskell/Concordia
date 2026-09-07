@@ -40,6 +40,11 @@ func tokenDir(cfg *config.Config) string {
 	return filepath.Join(filepath.Dir(cfg.Server.Database), "tokens")
 }
 
+// authFileTokenStore opens the per-account OAuth token store.
+func authFileTokenStore(cfg *config.Config) (*auth.FileTokenStore, error) {
+	return auth.NewFileTokenStore(tokenDir(cfg))
+}
+
 // newGoogleProvider builds a Google provider for one account from its stored
 // token.
 func newGoogleProvider(ctx context.Context, cfg *config.Config, oauthCfg *oauth2.Config, store *auth.FileTokenStore, ref string) (*googleprov.Provider, error) {
